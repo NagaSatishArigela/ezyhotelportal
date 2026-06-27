@@ -27,16 +27,19 @@ const authStateStorage = {
   },
   setItem: (name: string, value: string): void => {
     if (typeof window === 'undefined') return
-    sessionStorage.setItem(name, value)
     try {
-      const parsed = JSON.parse(value) as { state?: { rememberMe?: boolean; token?: unknown } }
+      const parsed = JSON.parse(value) as { state?: { rememberMe?: boolean; token?: unknown; refreshToken?: unknown } }
+      // Strip BOTH tokens before any persistence — tokens are memory-only.
+      // sessionStorage is accessible to JS so an XSS payload could steal tokens
+      // from it. By keeping tokens exclusively in the Zustand in-memory store
+      // (not persisted), we eliminate the XSS token-theft attack surface.
+      // Users re-authenticate on page reload — correct behaviour for a financial
+      // operations portal where security outweighs convenience.
+      const { token: _t, refreshToken: _rt, ...safeState } = parsed.state ?? {}
+      const safe = JSON.stringify({ ...parsed, state: safeState })
+      sessionStorage.setItem(name, safe)
       if (parsed?.state?.rememberMe) {
-        // Strip the access token before writing to localStorage — JWT tokens must
-        // never be persisted to localStorage (XSS-readable). User identity (name,
-        // role) is safe to keep; the token is re-acquired on the next session via
-        // the login flow.
-        const { token: _omit, ...safeState } = parsed.state ?? {}
-        localStorage.setItem(name, JSON.stringify({ ...parsed, state: safeState }))
+        localStorage.setItem(name, safe)
       } else {
         localStorage.removeItem(name)
       }
