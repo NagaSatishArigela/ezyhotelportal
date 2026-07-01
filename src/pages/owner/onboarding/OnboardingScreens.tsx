@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,9 +26,13 @@ import {
 
 // ── Real auto-save hook ─────────────────────────────────────────────────────
 // Creates the property draft on first save, then saves each step to the backend.
+// Also registers saveNow with the store so WizardShell can flush any pending
+// debounce before navigating away (avoids losing data on fast "Continue" clicks).
 
 function useOnboardingAutoSave(step: number) {
-  const setDraftId = useOnboardingStore((s) => s.setDraftId)
+  const setDraftId      = useOnboardingStore((s) => s.setDraftId)
+  const setOnBeforeNext = useOnboardingStore((s) => s.setOnBeforeNext)
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const saveFn = useCallback(async (data: Record<string, unknown>) => {
     let draftId = useOnboardingStore.getState().draftId
@@ -38,7 +42,19 @@ function useOnboardingAutoSave(step: number) {
     }
     await saveOnboardingStep(draftId, step, data)
   }, [step, setDraftId])
-  return useAutoSave({ step, saveFn })
+
+  const result = useAutoSave({ step, saveFn })
+
+  // Keep a stable ref so the effect dependency doesn't change on every render
+  const saveNowRef = useRef(result.saveNow)
+  saveNowRef.current = result.saveNow
+
+  useEffect(() => {
+    setOnBeforeNext(() => saveNowRef.current())
+    return () => setOnBeforeNext(null)
+  }, [setOnBeforeNext])
+
+  return result
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────

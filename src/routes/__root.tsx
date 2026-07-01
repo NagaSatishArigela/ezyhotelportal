@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router'
 import { Toaster } from 'sonner'
+import { SessionExpiryWarning } from '@/components/shared/SessionExpiryWarning'
 
 function RootErrorComponent({ error }: { error: Error }) {
   const router = useRouter()
@@ -23,6 +24,7 @@ export const Route = createRootRoute({
   component: () => (
     <>
       <Outlet />
+      <SessionExpiryWarning />
       <Toaster position="top-right" richColors closeButton expand={false} />
     </>
   ),

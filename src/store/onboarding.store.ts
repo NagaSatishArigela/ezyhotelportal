@@ -16,12 +16,18 @@ interface OnboardingState {
   // shape is validated by its own Zod resolver before submission.
   stepData: Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7, Record<string, unknown>>>
 
+  // Registered by the active step via useOnboardingAutoSave — not persisted.
+  // WizardShell calls this before navigating to guarantee any pending debounce
+  // is flushed to the backend before the component unmounts.
+  onBeforeNext: (() => Promise<void>) | null
+
   setCurrentStep: (step: number) => void
   completeStep: (step: number) => void
   setDraftId: (id: string) => void
   setAutoSaveState: (state: AutoSaveState) => void
   setLastSavedAt: (ts: string) => void
   saveStepData: (step: number, data: Record<string, unknown>) => void
+  setOnBeforeNext: (fn: (() => Promise<void>) | null) => void
   reset: () => void
 }
 
@@ -38,6 +44,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       ...initialState,
+      onBeforeNext: null,
 
       setCurrentStep: (step) => set({ currentStep: step }),
       completeStep: (step) =>
@@ -51,11 +58,21 @@ export const useOnboardingStore = create<OnboardingState>()(
       setLastSavedAt: (lastSavedAt) => set({ lastSavedAt }),
       saveStepData: (step, data) =>
         set((s) => ({ stepData: { ...s.stepData, [step]: data } })),
+      setOnBeforeNext: (fn) => set({ onBeforeNext: fn }),
       reset: () => set(initialState),
     }),
     {
       name: 'stayflex-onboarding',
       storage: createJSONStorage(() => localStorage),
+      // onBeforeNext is a function — not serialisable, must not be persisted
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        completedSteps: state.completedSteps,
+        draftId: state.draftId,
+        autoSaveState: state.autoSaveState,
+        lastSavedAt: state.lastSavedAt,
+        stepData: state.stepData,
+      }),
     }
   )
 )

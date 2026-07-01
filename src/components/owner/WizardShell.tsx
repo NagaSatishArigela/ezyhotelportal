@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useShallow } from 'zustand/react/shallow'
 import { Zap, Shield, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
 import { useOnboardingStore } from '@/store/onboarding.store'
 import { useAuth } from '@/hooks/useAuth'
 import { StepProgress } from '@/components/shared/StepProgress'
@@ -45,12 +46,13 @@ export function WizardShell({
   hideFooter = false,
 }: WizardShellProps) {
   const { user, logout } = useAuth()
-  const { currentStep, completedSteps, setCurrentStep, completeStep } = useOnboardingStore(
+  const { currentStep, completedSteps, setCurrentStep, completeStep, onBeforeNext } = useOnboardingStore(
     useShallow((s) => ({
       currentStep: s.currentStep,
       completedSteps: s.completedSteps,
       setCurrentStep: s.setCurrentStep,
       completeStep: s.completeStep,
+      onBeforeNext: s.onBeforeNext,
     }))
   )
   const navigate = useNavigate()
@@ -60,6 +62,8 @@ export function WizardShell({
     ? routeStep
     : currentStep
 
+  const [isSaving, setIsSaving] = useState(false)
+
   useEffect(() => {
     if (activeStep !== currentStep) setCurrentStep(activeStep)
   }, [activeStep, currentStep, setCurrentStep])
@@ -67,14 +71,28 @@ export function WizardShell({
   const handleBack = onBack ?? (activeStep > 1
     ? () => navigate({ to: `/owner/onboarding/step${activeStep - 1}` as never })
     : undefined)
-  const handleNext = onNext ?? (() => {
+
+  const defaultNext = async () => {
+    if (onBeforeNext) {
+      setIsSaving(true)
+      try {
+        await onBeforeNext()
+      } catch {
+        toast.error('Failed to save progress. Please try again.')
+        setIsSaving(false)
+        return
+      }
+      setIsSaving(false)
+    }
     completeStep(activeStep)
     if (activeStep >= WIZARD_STEPS.length) {
       navigate({ to: '/owner/status' })
       return
     }
     navigate({ to: `/owner/onboarding/step${activeStep + 1}` as never })
-  })
+  }
+
+  const handleNext = onNext ?? defaultNext
 
   return (
     <div className="flex h-screen overflow-hidden bg-navy-50">
@@ -175,7 +193,7 @@ export function WizardShell({
             <Button variant="outline" type="button" onClick={() => navigate({ to: "/owner/status" })}>
               Save & exit
             </Button>
-            <Button variant="primary" type="submit" onClick={handleNext} loading={nextLoading} disabled={nextDisabled}>
+            <Button variant="primary" type="submit" onClick={handleNext} loading={nextLoading || isSaving} disabled={nextDisabled || isSaving}>
               {activeStep >= WIZARD_STEPS.length ? 'Submit for review' : nextLabel} &rarr;
             </Button>
           </div>

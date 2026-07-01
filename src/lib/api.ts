@@ -17,10 +17,15 @@ api.interceptors.request.use((config) => {
 })
 
 let isRefreshing = false
-let refreshQueue: Array<(token: string) => void> = []
+let refreshQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = []
 
 function flushQueue(token: string) {
-  refreshQueue.forEach((cb) => cb(token))
+  refreshQueue.forEach(({ resolve }) => resolve(token))
+  refreshQueue = []
+}
+
+function rejectQueue(error: unknown) {
+  refreshQueue.forEach(({ reject }) => reject(error))
   refreshQueue = []
 }
 
@@ -33,7 +38,7 @@ api.interceptors.response.use(
       return Promise.reject(err)
     }
 
-    const { refreshToken, setToken, logout } = useAuthStore.getState()
+    const { refreshToken, setToken, setRefreshToken, logout } = useAuthStore.getState()
     if (!refreshToken) {
       // No refresh token (e.g. demo/mock auth) — let the mutation's onError
       // handler show a toast rather than force-logging the user out.
@@ -42,10 +47,13 @@ api.interceptors.response.use(
 
     if (isRefreshing) {
       // Queue concurrent requests until the refresh completes
-      return new Promise((resolve) => {
-        refreshQueue.push((newToken) => {
-          original.headers.Authorization = `Bearer ${newToken}`
-          resolve(api(original))
+      return new Promise((resolve, reject) => {
+        refreshQueue.push({
+          resolve: (newToken) => {
+            original.headers.Authorization = `Bearer ${newToken}`
+            resolve(api(original))
+          },
+          reject,
         })
       })
     }
@@ -53,16 +61,17 @@ api.interceptors.response.use(
     isRefreshing = true
     original._retried = true
     try {
-      const { data } = await axios.post<{ accessToken: string }>(
+      const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
         `${import.meta.env.VITE_API_URL ?? '/api'}/auth/refresh-token`,
         { refreshToken },
       )
-      const newToken = data.accessToken
-      setToken(newToken)
-      flushQueue(newToken)
-      original.headers.Authorization = `Bearer ${newToken}`
+      setToken(data.accessToken)
+      setRefreshToken(data.refreshToken)
+      flushQueue(data.accessToken)
+      original.headers.Authorization = `Bearer ${data.accessToken}`
       return api(original)
-    } catch {
+    } catch (refreshError) {
+      rejectQueue(refreshError)
       logout()
       window.location.href = '/login'
       return Promise.reject(err)

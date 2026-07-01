@@ -85,8 +85,12 @@ export async function portalLogin(email: string, password: string): Promise<Port
       })
       onboardingStatus = mapPropertyStatus(propData.status)
       if (propData.id) propertyId = propData.id
-    } catch {
-      onboardingStatus = 'not_started'
+    } catch (err) {
+      // Re-throw: silently defaulting would route an approved owner to the
+      // onboarding wizard on any transient network error. Let the login
+      // form's onError handler show a toast so the user can retry.
+      console.error('[portalLogin] GET /me/property-status failed:', err)
+      throw new Error('Unable to load your account status. Please try logging in again.')
     }
   }
 

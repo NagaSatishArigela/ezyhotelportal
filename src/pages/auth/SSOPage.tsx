@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Loader2, Zap } from 'lucide-react'
@@ -20,8 +20,12 @@ export function SSOPage() {
   const setAuth = useAuthStore((s) => s.setAuth)
   const saveStepData = useOnboardingStore((s) => s.saveStepData)
   const reset = useOnboardingStore((s) => s.reset)
+  const hasRun = useRef(false)
 
   useEffect(() => {
+    if (hasRun.current) return
+    hasRun.current = true
+
     const params = new URLSearchParams(window.location.search)
     const at = params.get('at')
     const rt = params.get('rt') ?? undefined
