@@ -6,10 +6,15 @@ import { useSessionExpiry } from '@/hooks/useSessionExpiry'
 import { useNavigate } from '@tanstack/react-router'
 
 export function SessionExpiryWarning() {
-  const { showWarning, secondsLeft, dismiss } = useSessionExpiry()
   const { refreshToken, setToken, setRefreshToken, logout } = useAuthStore()
   const [extending, setExtending] = useState(false)
   const navigate = useNavigate()
+  // When the countdown hits 0 the token is dead — log out and redirect so the
+  // UI can't linger in a fake-authenticated state.
+  const { showWarning, secondsLeft, dismiss } = useSessionExpiry(() => {
+    logout()
+    navigate({ to: '/login' })
+  })
 
   if (!showWarning) return null
 

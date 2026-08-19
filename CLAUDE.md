@@ -45,9 +45,9 @@
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `primary-600` | `#FF8F00` | CTAs, active nav, links |
-| `primary-700` | `#E65100` | Hover/pressed |
-| `primary-50` | `#FFF8E1` | Background tints |
+| `primary-600` | `#F05A00` | CTAs, active nav, links (brand color) |
+| `primary-700` | `#C74800` | Hover/pressed |
+| `primary-50` | `#FEF3EC` | Background tints |
 | `navy-900` | `#0F172A` | Primary text |
 | `navy-600` | `#475569` | Secondary text |
 | `navy-100` | `#F1F5F9` | Surface |

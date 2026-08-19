@@ -8,12 +8,13 @@ import type { User, Role, OnboardingStatus } from '@/types'
 
 // ── Type helpers ────────────────────────────────────────────────────────────
 
-type GlobalRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+type GlobalRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'SUPPORT'
 type PropertyStatus = 'draft' | 'pending_review' | 'needs_revision' | 'approved' | 'rejected' | 'suspended' | 'escalated' | null
 
 function mapRole(globalRole: GlobalRole): Role {
   if (globalRole === 'SUPER_ADMIN') return 'super_admin'
   if (globalRole === 'ADMIN') return 'admin'
+  if (globalRole === 'SUPPORT') return 'support'
   return 'owner'
 }
 
@@ -26,7 +27,7 @@ function mapPropertyStatus(status: PropertyStatus): OnboardingStatus {
     case 'approved':        return 'approved'
     case 'rejected':        return 'rejected'
     case 'escalated':       return 'under_review'
-    case 'suspended':       return 'approved'
+    case 'suspended':       return 'suspended'
     default:                return 'in_progress'
   }
 }
@@ -137,16 +138,45 @@ export async function submitOnboarding(propertyId: string): Promise<{
   return data
 }
 
+/** One reviewer-flagged item the owner must fix (admin-authored). */
+export interface RevisionItem {
+  field: string
+  reason: string
+}
+
+/** One revision round recorded by the server (newest last). */
+export interface RevisionNote {
+  adminId?: string
+  timestamp?: string
+  items: RevisionItem[]
+}
+
 /** Get the current status of a property (for the status page / Step 7 review). */
 export async function getPropertyStatus(propertyId: string): Promise<{
   status: string
   submissionRef: string | null
   submittedAt: string | null
   revisionCount: number
+  revisionNotes: RevisionNote[]
   timeline: { label: string; status: 'done' | 'current' | 'pending'; at: string | null }[]
 }> {
   const { data } = await api.get(`/properties/${propertyId}/status`)
   return data
+}
+
+/**
+ * Pull the latest round of reviewer-flagged items out of the raw revisionNotes
+ * blob (server stores an append-only array of { adminId, timestamp, items }).
+ * Defensive: the field is typed loosely server-side (`unknown`).
+ */
+export function latestRevisionItems(revisionNotes: unknown): RevisionItem[] {
+  if (!Array.isArray(revisionNotes) || revisionNotes.length === 0) return []
+  const last = revisionNotes[revisionNotes.length - 1] as { items?: unknown }
+  if (!last || !Array.isArray(last.items)) return []
+  return last.items.filter(
+    (i): i is RevisionItem =>
+      !!i && typeof (i as RevisionItem).field === 'string' && typeof (i as RevisionItem).reason === 'string',
+  )
 }
 
 /** Get the saved draft data for a property. */
@@ -183,11 +213,23 @@ export async function pennyDrop(): Promise<{ success: boolean; amount: number; m
   return { success: true, amount: 1, message: '₹1 credited successfully. Account verified.' }
 }
 
-/** Document upload — kept as mock until cloud storage is configured. */
-export async function uploadDocument(file: File, type: string): Promise<{ url: string; verified: boolean }> {
-  void file; void type
-  await new Promise((r) => setTimeout(r, 1200))
-  return { url: `https://mock.cdn/docs/${type}-${Date.now()}.pdf`, verified: true }
+/**
+ * Real file upload — POSTs multipart/form-data to the server's /uploads
+ * endpoint and returns the absolute URL the storefront/admin can load.
+ * Reuses the shared axios instance (auto-attaches the Bearer token); axios
+ * strips the instance's JSON Content-Type for FormData bodies and lets the
+ * browser set the multipart boundary.
+ */
+export async function uploadFile(file: File): Promise<{ url: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  // The shared axios instance defaults Content-Type to application/json; for a
+  // multipart upload we must clear it so the browser sets the correct
+  // `multipart/form-data; boundary=…` header, otherwise the server 400s.
+  const { data } = await api.post<{ url: string; key: string }>('/uploads', form, {
+    headers: { 'Content-Type': undefined },
+  })
+  return { url: data.url }
 }
 
 /** Pincode lookup — kept as mock until a real pincode provider is configured. */

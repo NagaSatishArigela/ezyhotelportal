@@ -4,14 +4,26 @@ import { decodeToken } from '@/lib/token'
 
 const WARNING_THRESHOLD_SEC = 60
 
-export function useSessionExpiry() {
+/**
+ * Drives the session-expiry countdown modal. When the countdown reaches 0 the
+ * session is over: `onExpire` fires exactly once so the caller can log the user
+ * out and redirect to /login (otherwise the modal would just vanish, leaving an
+ * authenticated-looking UI backed by a dead token).
+ */
+export function useSessionExpiry(onExpire?: () => void) {
   const token = useAuthStore((s) => s.token)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [showWarning, setShowWarning] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(WARNING_THRESHOLD_SEC)
+  const [expired, setExpired] = useState(false)
+
+  // Keep the latest callback without re-arming the timers when it changes.
+  const onExpireRef = useRef(onExpire)
+  onExpireRef.current = onExpire
 
   useEffect(() => {
     setShowWarning(false)
+    setExpired(false)
 
     if (!isAuthenticated || !token) return
 
@@ -35,6 +47,7 @@ export function useSessionExpiry() {
           if (prev <= 1) {
             clearInterval(ids.countdown)
             setShowWarning(false)
+            setExpired(true)
             return 0
           }
           return prev - 1
@@ -57,6 +70,12 @@ export function useSessionExpiry() {
       clearInterval(ids.countdown)
     }
   }, [token, isAuthenticated])
+
+  // Fire the expiry callback once, in an effect (not inside the setState updater
+  // which can run twice under StrictMode).
+  useEffect(() => {
+    if (expired) onExpireRef.current?.()
+  }, [expired])
 
   const dismiss = () => setShowWarning(false)
 

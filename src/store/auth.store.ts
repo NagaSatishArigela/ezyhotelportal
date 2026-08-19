@@ -91,6 +91,18 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'stayflex-auth',
       storage: createJSONStorage(() => authStateStorage),
+      // Tokens are memory-only (stripped before persistence), so after a reload
+      // no token survives. Persisting isAuthenticated:true without a token caused
+      // an infinite /login <-> guard redirect loop. Force a clean unauthenticated
+      // state on rehydration — the user re-authenticates, which is this portal's
+      // intended reload behaviour. (Pilot: add cookie-backed session restore.)
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isAuthenticated = false
+          state.token = null
+          state.refreshToken = null
+        }
+      },
     }
   )
 )

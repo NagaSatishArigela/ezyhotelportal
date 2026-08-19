@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { Eye, EyeOff, Zap, TrendingUp, Shield, Clock, IndianRupee } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { portalLogin } from '@/lib/portal-api'
 import { useAuthStore } from '@/store/auth.store'
 import { Button } from '@/components/ui/button'
@@ -92,11 +93,9 @@ export function LoginPage() {
 
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-9">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 shadow-sm">
-              <Zap size={20} className="text-white" aria-hidden />
-            </div>
+            <EzyMark size={38} className="shrink-0" />
             <div>
-              <p className="font-display font-bold text-navy-900 text-lg leading-none">Stayflex</p>
+              <EzyWordmark className="font-display font-bold text-lg leading-none" />
               <p className="text-[11px] text-navy-400 mt-0.5">Partner Portal</p>
             </div>
           </div>
@@ -224,7 +223,7 @@ export function LoginPage() {
           </div>
 
           <h2 className="font-display font-bold text-[30px] leading-tight mb-3">
-            Grow your property business with Stayflex
+            Grow your property business with EzyHotels
           </h2>
           <p className="text-white/75 text-base leading-relaxed mb-8">
             India's fastest-growing hourly & overnight booking platform for hotels, resorts, and homestays.

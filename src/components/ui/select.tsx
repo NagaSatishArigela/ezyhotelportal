@@ -15,7 +15,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           'flex h-12 w-full appearance-none rounded-[10px] border bg-white px-4 pr-10 text-[15px] text-navy-900 outline-none transition-all',
           error
             ? 'border-error-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'
-            : 'border-border focus:border-primary-600 focus:shadow-[0_0_0_3px_rgba(255,143,0,0.15)]',
+            : 'border-border focus:border-primary-600 focus:shadow-[0_0_0_3px_rgba(240,90,0,0.15)]',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className
         )}

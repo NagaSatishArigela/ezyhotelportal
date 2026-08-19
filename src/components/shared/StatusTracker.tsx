@@ -14,7 +14,7 @@ interface StatusConfig {
 const STATUS_CONFIG: Record<OnboardingStatus, StatusConfig> = {
   not_started: {
     label: 'Not Started',
-    description: 'Begin your property onboarding to list on Stayflex.',
+    description: 'Begin your property onboarding to list on EzyHotels.',
     icon: Clock, colorClass: 'text-navy-500', bgClass: 'bg-navy-50', borderClass: 'border-navy-200',
   },
   in_progress: {
@@ -47,6 +47,11 @@ const STATUS_CONFIG: Record<OnboardingStatus, StatusConfig> = {
     description: 'Admin has rejected this application. Contact support for details.',
     icon: XCircle, colorClass: 'text-error-700', bgClass: 'bg-error-50', borderClass: 'border-error-500',
   },
+  suspended: {
+    label: 'Listing Suspended',
+    description: 'Your property has been suspended and is not currently accepting bookings. Contact support to resolve this.',
+    icon: AlertCircle, colorClass: 'text-error-700', bgClass: 'bg-error-50', borderClass: 'border-error-500',
+  },
 }
 
 // Single source of truth — STAGE_ORDER derived from TIMELINE_STAGES
@@ -75,7 +80,7 @@ export function StatusTracker({ status, referenceId }: StatusTrackerProps) {
       <div className={cn('relative p-6', config.bgClass)}>
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,143,0,0.12) 0%, transparent 60%)' }}
+          style={{ background: 'radial-gradient(circle at 50% 0%, rgba(240,90,0,0.12) 0%, transparent 60%)' }}
           aria-hidden
         />
 
@@ -85,9 +90,9 @@ export function StatusTracker({ status, referenceId }: StatusTrackerProps) {
             'w-[72px] h-[72px] rounded-full flex items-center justify-center mx-auto mb-[18px]',
             status === 'approved'
               ? 'bg-success-500 shadow-[0_8px_32px_rgba(34,197,94,0.35)]'
-              : status === 'revision_requested' || status === 'rejected'
+              : status === 'revision_requested' || status === 'rejected' || status === 'suspended'
               ? 'bg-error-500 shadow-[0_8px_32px_rgba(239,68,68,0.3)]'
-              : 'bg-primary-600 shadow-[0_8px_32px_rgba(255,143,0,0.3)]',
+              : 'bg-primary-600 shadow-[0_8px_32px_rgba(240,90,0,0.3)]',
           )}>
             <Icon size={36} className="text-white" aria-hidden />
           </div>

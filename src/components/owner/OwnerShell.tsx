@@ -1,8 +1,9 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   LayoutDashboard, CalendarDays, BookOpen, BarChart2,
-  Wallet, Star, Settings, BedDouble, Gavel, Menu, Bell, LogOut, Lock, Zap,
+  Wallet, Star, Settings, BedDouble, Gavel, Menu, Bell, LogOut, Lock,
 } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -68,13 +69,11 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           collapsed ? 'w-16' : 'w-[232px]'
         )}>
           {/* Logo */}
-          <div className="flex h-16 items-center gap-2.5 px-4 border-b border-border">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-600">
-              <Zap size={16} className="text-white" strokeWidth={2.4} aria-hidden />
-            </div>
+          <div className="flex h-16 items-center gap-2 px-4 border-b border-border">
+            <EzyMark size={30} className="shrink-0" />
             {!collapsed && (
               <div>
-                <p className="font-display font-bold text-navy-900 text-[15px] leading-none">stayflex</p>
+                <EzyWordmark className="font-display font-bold text-[15px] leading-none" />
                 <p className="text-[10px] text-navy-400 uppercase tracking-wider mt-0.5">Owner portal</p>
               </div>
             )}

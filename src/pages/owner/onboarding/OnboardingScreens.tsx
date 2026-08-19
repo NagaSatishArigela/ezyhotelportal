@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import {
-  Building2, Camera, CheckCircle, CreditCard, FileText, Home, ImagePlus,
+  Building2, Camera, CheckCircle, CreditCard, FileText, Home,
   IndianRupee, MapPin, Shield, Upload, Wifi, Car, Waves, Dumbbell,
   Utensils, Phone, Trash2, Plus, Search, Loader2, CheckCheck,
-  Info, ChevronDown,
+  Info, ChevronDown, Star, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,41 +16,82 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { FieldWrapper } from '@/components/shared/FieldWrapper'
 import { DocumentUploader } from '@/components/shared/DocumentUploader'
+import { PhotoTile } from '@/components/shared/PhotoTile'
 import { cn, formatINR } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/onboarding.store'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import {
   createPropertyDraft, saveOnboardingStep, submitOnboarding,
-  verifyIFSC, pennyDrop, uploadDocument, verifyPincode,
+  verifyIFSC, pennyDrop, uploadFile, verifyPincode,
 } from '@/lib/portal-api'
+import { completeServerSteps } from '@/lib/onboarding-mapping'
+import { useNavigate } from '@tanstack/react-router'
 
 // ── Real auto-save hook ─────────────────────────────────────────────────────
 // Creates the property draft on first save, then saves each step to the backend.
 // Also registers saveNow with the store so WizardShell can flush any pending
 // debounce before navigating away (avoids losing data on fast "Continue" clicks).
 
-function useOnboardingAutoSave(step: number) {
+// `step` is the PORTAL UX step (1–7). saveFn maps the accumulated stepData to
+// the SERVER contract's 5 steps and PATCHes only the server step(s) this screen
+// feeds — so every request carries whitelisted server fields and stops 400ing.
+// `validate` (optional) runs the screen's existing zod/RHF check before the
+// pending save is flushed; a rejection here blocks navigation in WizardShell.
+// Last successfully-saved payload signature per `${draftId}:${serverStep}` —
+// lets autosave skip re-PATCHing unchanged steps and avoid rate-limit 429s.
+const lastSavedSignature = new Map<string, string>()
+
+function useOnboardingAutoSave(step: number, validate?: () => Promise<boolean>) {
   const setDraftId      = useOnboardingStore((s) => s.setDraftId)
   const setOnBeforeNext = useOnboardingStore((s) => s.setOnBeforeNext)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const saveFn = useCallback(async (data: Record<string, unknown>) => {
+  const saveFn = useCallback(async () => {
+    const stepData = useOnboardingStore.getState().stepData
+    // A server step spans multiple UX steps and the server validates each PATCH
+    // against the full step DTO, so we only persist server steps that are now
+    // COMPLETE. Incomplete steps stay in the local draft and flush once their
+    // remaining fields are entered — no partial PATCH, no 400.
+    const complete = completeServerSteps(stepData)
+    if (complete.length === 0) return
+
     let draftId = useOnboardingStore.getState().draftId
     if (!draftId) {
       draftId = await createPropertyDraft()
       setDraftId(draftId)
     }
-    await saveOnboardingStep(draftId, step, data)
+    // Only PATCH steps whose payload actually changed since the last successful
+    // save — flushing every complete step on each keystroke would trip the
+    // backend's per-IP rate limit (429).
+    for (const { step: serverStep, payload } of complete) {
+      const key = `${draftId}:${serverStep}`
+      const sig = JSON.stringify(payload)
+      if (lastSavedSignature.get(key) === sig) continue
+      await saveOnboardingStep(draftId, serverStep, payload)
+      lastSavedSignature.set(key, sig)
+    }
   }, [step, setDraftId])
 
   const result = useAutoSave({ step, saveFn })
 
-  // Keep a stable ref so the effect dependency doesn't change on every render
+  // Keep stable refs so the effect dependency doesn't change on every render
   const saveNowRef = useRef(result.saveNow)
   saveNowRef.current = result.saveNow
+  const validateRef = useRef(validate)
+  validateRef.current = validate
 
   useEffect(() => {
-    setOnBeforeNext(() => saveNowRef.current())
+    setOnBeforeNext(async () => {
+      if (validateRef.current) {
+        const ok = await validateRef.current()
+        if (!ok) {
+          throw Object.assign(
+            new Error('Please fix the highlighted fields before continuing.'),
+            { isValidation: true },
+          )
+        }
+      }
+      await saveNowRef.current()
+    })
     return () => setOnBeforeNext(null)
   }, [setOnBeforeNext])
 
@@ -117,7 +158,7 @@ const step1Schema = z.object({
   ownerName:        z.string().min(2, 'At least 2 characters'),
   phone:            z.string().regex(/^\d{10}$/, 'Enter 10-digit mobile number'),
   email:            z.string().email('Enter a valid email'),
-  businessEntity:   z.enum(['individual', 'llp', 'partnership', 'pvtltd']),
+  businessEntity:   z.enum(['individual', 'sole_proprietor', 'partnership', 'llp', 'private_limited', 'public_limited']),
   businessName:     z.string().min(2, 'Required'),
   gstNumber:        z.string().optional().or(z.literal('')),
   propertyCategory: z.enum(['budget', 'mid', 'premium']),
@@ -132,7 +173,7 @@ const CATEGORIES = [
 
 export function Step1PropertyDetails() {
   const stored = useOnboardingStore((s) => s.stepData[1] as Partial<Step1Data> | undefined)
-  const { register, watch, setValue, formState: { errors } } = useForm<Step1Data>({
+  const { register, watch, setValue, trigger, formState: { errors } } = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
       ownerName: stored?.ownerName ?? '',
@@ -146,7 +187,7 @@ export function Step1PropertyDetails() {
   })
 
   const values = watch()
-  const { triggerSave } = useOnboardingAutoSave(1)
+  const { triggerSave } = useOnboardingAutoSave(1, () => trigger())
 
   useEffect(() => { triggerSave(values as Record<string, unknown>) }, [JSON.stringify(values)])
 
@@ -169,10 +210,12 @@ export function Step1PropertyDetails() {
             </FieldWrapper>
             <FieldWrapper label="Business entity" required>
               <Select {...register('businessEntity')}>
-                <option value="individual">Individual / Proprietor</option>
-                <option value="llp">LLP / Private Limited</option>
+                <option value="individual">Individual</option>
+                <option value="sole_proprietor">Sole Proprietor</option>
                 <option value="partnership">Partnership firm</option>
-                <option value="pvtltd">Public Limited Company</option>
+                <option value="llp">LLP</option>
+                <option value="private_limited">Private Limited Company</option>
+                <option value="public_limited">Public Limited Company</option>
               </Select>
             </FieldWrapper>
             <FieldWrapper label="Legal / business name" required className="sm:col-span-2" error={errors.businessName?.message}>
@@ -205,7 +248,7 @@ export function Step1PropertyDetails() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-navy-400 mt-2">Default rate. Can be customised by Stayflex admin.</p>
+            <p className="text-xs text-navy-400 mt-2">Default rate. Can be customised by EzyHotels admin.</p>
           </div>
 
           <div className="rounded-[10px] border border-primary-100 bg-primary-50 p-4 flex items-start gap-3">
@@ -224,12 +267,14 @@ export function Step1PropertyDetails() {
 // ── Step 2 — Property details + amenities + policy ──────────────────────────
 
 const PROPERTY_TYPES = [
-  { value: 'hotel',       label: 'Hotel',        icon: Building2 },
-  { value: 'boutique',    label: 'Boutique',     icon: Building2 },
-  { value: 'service_apt', label: 'Service Apt.', icon: Home },
-  { value: 'resort',      label: 'Resort',       icon: Waves },
-  { value: 'homestay',    label: 'Homestay',     icon: Home },
-  { value: 'villa',       label: 'Villa',        icon: Building2 },
+  { value: 'hotel',    label: 'Hotel',    icon: Building2 },
+  { value: 'resort',   label: 'Resort',   icon: Waves },
+  { value: 'homestay', label: 'Homestay', icon: Home },
+  { value: 'villa',    label: 'Villa',    icon: Building2 },
+  { value: 'pg',       label: 'PG',       icon: Home },
+  { value: 'farm',     label: 'Farm',     icon: Home },
+  { value: 'banquet',  label: 'Banquet',  icon: Building2 },
+  { value: 'other',    label: 'Other',    icon: Building2 },
 ]
 
 const AMENITIES_LIST = [
@@ -257,6 +302,9 @@ const step2Schema = z.object({
   propertyName:        z.string().min(2, 'Required'),
   propertyType:        z.string().min(1, 'Select a type'),
   address:             z.string().min(5, 'Required'),
+  addressLine2:        z.string().min(5, 'At least 5 characters').max(300, 'Max 300 characters'),
+  latitude:            z.number().min(-90, 'Invalid latitude').max(90, 'Invalid latitude'),
+  longitude:           z.number().min(-180, 'Invalid longitude').max(180, 'Invalid longitude'),
   city:                z.string().min(2, 'Required'),
   state:               z.string().min(2, 'Required'),
   pincode:             z.string().regex(/^\d{6}$/, '6-digit PIN code'),
@@ -271,12 +319,15 @@ type Step2Data = z.infer<typeof step2Schema>
 
 export function Step2RoomsPricing() {
   const stored = useOnboardingStore((s) => s.stepData[2] as Partial<Step2Data> | undefined)
-  const { register, watch, setValue, formState: { errors } } = useForm<Step2Data>({
+  const { register, watch, setValue, trigger, formState: { errors } } = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
     defaultValues: {
       propertyName: stored?.propertyName ?? '',
       propertyType: stored?.propertyType ?? 'hotel',
       address: stored?.address ?? '',
+      addressLine2: stored?.addressLine2 ?? '',
+      latitude: stored?.latitude ?? 20.5937,
+      longitude: stored?.longitude ?? 78.9629,
       city: stored?.city ?? '',
       state: stored?.state ?? '',
       pincode: stored?.pincode ?? '',
@@ -290,7 +341,7 @@ export function Step2RoomsPricing() {
   })
 
   const values = watch()
-  const { triggerSave } = useOnboardingAutoSave(2)
+  const { triggerSave } = useOnboardingAutoSave(2, () => trigger())
   useEffect(() => { triggerSave(values as Record<string, unknown>) }, [JSON.stringify(values)])
 
   const [pincodeLoading, setPincodeLoading] = useState(false)
@@ -352,8 +403,11 @@ export function Step2RoomsPricing() {
           </div>
 
           {/* Address */}
-          <FieldWrapper label="Street address" required error={errors.address?.message}>
+          <FieldWrapper label="Street address (line 1)" required error={errors.address?.message}>
             <Input {...register('address')} placeholder="Building, street, locality" error={!!errors.address} />
+          </FieldWrapper>
+          <FieldWrapper label="Address line 2" required error={errors.addressLine2?.message} hint="Area, sub-locality, or additional directions">
+            <Input {...register('addressLine2')} placeholder="Landmark area, sector, or nearby directions" error={!!errors.addressLine2} />
           </FieldWrapper>
           <div className="grid gap-3 sm:grid-cols-3">
             <FieldWrapper label="PIN code" required error={errors.pincode?.message}>
@@ -374,6 +428,49 @@ export function Step2RoomsPricing() {
             <FieldWrapper label="State" required error={errors.state?.message}>
               <Input {...register('state')} placeholder="Auto-filled" error={!!errors.state} />
             </FieldWrapper>
+          </div>
+
+          {/* Map location — pin coordinates */}
+          <div className="rounded-[12px] border border-border bg-navy-50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-primary-600" />
+                <p className="text-sm font-semibold text-navy-800">Map location</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setValue('latitude', 20.5937); setValue('longitude', 78.9629) }}
+                className="text-xs font-semibold text-primary-600 hover:underline"
+              >
+                Reset pin to India
+              </button>
+            </div>
+            <p className="text-xs text-navy-500 mb-3">
+              Drop the pin at your property entrance. Enter the exact coordinates below —
+              guests use these for navigation.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FieldWrapper label="Latitude" required error={errors.latitude?.message}>
+                <Input
+                  {...register('latitude', { valueAsNumber: true })}
+                  type="number"
+                  step="any"
+                  placeholder="20.5937"
+                  className="font-mono"
+                  error={!!errors.latitude}
+                />
+              </FieldWrapper>
+              <FieldWrapper label="Longitude" required error={errors.longitude?.message}>
+                <Input
+                  {...register('longitude', { valueAsNumber: true })}
+                  type="number"
+                  step="any"
+                  placeholder="78.9629"
+                  className="font-mono"
+                  error={!!errors.longitude}
+                />
+              </FieldWrapper>
+            </div>
           </div>
 
           <FieldWrapper label="Description" error={errors.description?.message} hint="Describe the location, vibe, and what makes guests choose you.">
@@ -459,70 +556,191 @@ export function Step2RoomsPricing() {
 
 // ── Step 3 — Media & gallery ────────────────────────────────────────────────
 
-const MEDIA_CHECKLIST = [
-  { label: 'Exterior / entrance', required: true,  hint: 'Set as cover' },
-  { label: 'Lobby or reception',  required: true,  hint: 'Required' },
-  { label: 'Standard room',       required: true,  hint: 'Required' },
-  { label: 'Bathroom',            required: true,  hint: 'Required' },
-  { label: 'Amenity / view',      required: false, hint: 'Recommended' },
-  { label: 'Food or cafe area',   required: false, hint: 'Optional' },
+// Server Photo.category vocabulary (contract §Step 4).
+type PhotoCategory = 'exterior' | 'room' | 'reception' | 'washroom' | 'common'
+
+interface PhotoEntry {
+  id: string
+  category: PhotoCategory
+  url: string
+  isPrimary?: boolean
+  sortOrder?: number
+}
+
+const PHOTO_CATEGORIES: { id: PhotoCategory; label: string; required: boolean; hint: string }[] = [
+  { id: 'exterior',  label: 'Exterior / entrance', required: true,  hint: 'Facade, entrance, signage' },
+  { id: 'room',      label: 'Rooms',               required: true,  hint: 'Guest rooms / suites' },
+  { id: 'reception', label: 'Reception / lobby',   required: false, hint: 'Front desk, waiting area' },
+  { id: 'washroom',  label: 'Washroom',            required: false, hint: 'Bathrooms' },
+  { id: 'common',    label: 'Common areas',        required: false, hint: 'Pool, rooftop, dining, views' },
 ]
 
+const MAX_PER_CATEGORY = 10
+const MAX_TOTAL = 25
+
+// Minimal gate: at least one photo AND one marked as cover before Continue.
+const photosGateSchema = z
+  .array(
+    z.object({
+      category: z.string(),
+      url: z.string().url(),
+      isPrimary: z.boolean().optional(),
+    }),
+  )
+  .min(1, 'Add at least one photo before continuing.')
+  .refine((photos) => photos.some((p) => p.isPrimary), 'Mark one photo as the cover image.')
+
 export function Step3Policies() {
-  const stored = useOnboardingStore((s) => s.stepData[3] as { reviewerNotes?: string; uploadedCount?: number } | undefined)
-  const [uploadedCount, setUploadedCount] = useState(stored?.uploadedCount ?? 0)
+  const stored = useOnboardingStore(
+    (s) => s.stepData[3] as { reviewerNotes?: string; photos?: PhotoEntry[] } | undefined,
+  )
+  const [photos, setPhotos] = useState<PhotoEntry[]>(stored?.photos ?? [])
   const [reviewerNotes, setReviewerNotes] = useState(stored?.reviewerNotes ?? '')
-  const { triggerSave } = useOnboardingAutoSave(3)
+  const [busy, setBusy] = useState<PhotoCategory | null>(null)
+
+  const validate = useCallback(async () => {
+    const result = photosGateSchema.safeParse(photos)
+    if (!result.success) {
+      toast.error(result.error.issues[0]?.message ?? 'Add photos before continuing.')
+      return false
+    }
+    return true
+  }, [photos])
+
+  const { triggerSave } = useOnboardingAutoSave(3, validate)
 
   useEffect(() => {
-    triggerSave({ uploadedCount, reviewerNotes })
-  }, [uploadedCount, reviewerNotes])
+    triggerSave({ reviewerNotes, photos })
+  }, [reviewerNotes, JSON.stringify(photos)])
+
+  const addFiles = async (category: PhotoCategory, files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const list = Array.from(files)
+    const inCategory = photos.filter((p) => p.category === category).length
+    const total = photos.length
+
+    if (total >= MAX_TOTAL) { toast.error(`You can upload at most ${MAX_TOTAL} photos.`); return }
+    if (inCategory >= MAX_PER_CATEGORY) { toast.error(`Max ${MAX_PER_CATEGORY} photos per category.`); return }
+
+    const room = Math.min(list.length, MAX_PER_CATEGORY - inCategory, MAX_TOTAL - total)
+    const accepted = list.slice(0, room)
+    if (accepted.length < list.length) toast.info(`Only ${accepted.length} photo(s) added — category/total limit reached.`)
+
+    setBusy(category)
+    try {
+      for (const file of accepted) {
+        if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} is over 10MB.`); continue }
+        const { url } = await uploadFile(file)
+        setPhotos((prev) => {
+          const isFirst = prev.length === 0
+          return [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              category,
+              url,
+              sortOrder: prev.length,
+              isPrimary: isFirst, // first-ever photo becomes cover by default
+            },
+          ]
+        })
+      }
+      toast.success('Photo uploaded')
+    } catch {
+      toast.error('Upload failed. Please try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const removePhoto = (id: string) => {
+    setPhotos((prev) => {
+      const next = prev.filter((p) => p.id !== id).map((p, i) => ({ ...p, sortOrder: i }))
+      // Ensure a cover still exists if any photos remain.
+      if (next.length > 0 && !next.some((p) => p.isPrimary)) next[0].isPrimary = true
+      return next
+    })
+  }
+
+  const setCover = (id: string) => {
+    setPhotos((prev) => prev.map((p) => ({ ...p, isPrimary: p.id === id })))
+  }
 
   return (
     <div className="space-y-6">
-      <StepHeader step={3} title="Media & gallery" subtitle="High-quality photos increase bookings by 40%. Add at least 5 clear images." />
+      <StepHeader step={3} title="Media & gallery" subtitle="High-quality photos increase bookings by 40%. Add at least one photo and mark a cover." />
       <TwoCol side={
         <SideNote icon={Camera} title="Photo quality rules" body="Use landscape orientation, natural daylight, no watermarks, no text overlays, no misleading crops. Minimum 1200px wide." />
       }>
         <div className="space-y-6">
-          <div
-            className="rounded-[12px] border-2 border-dashed border-primary-200 bg-primary-50 p-8 text-center cursor-pointer hover:bg-primary-100 transition-colors"
-            onClick={() => { setUploadedCount((p) => p + 1); toast.success('Photo uploaded successfully') }}
-          >
-            <ImagePlus className="mx-auto text-primary-600 mb-3" size={28} aria-hidden />
-            <p className="font-semibold text-navy-900">Drag photos here or click to upload</p>
-            <p className="mt-1 text-sm text-navy-500">JPG or PNG · Min 1200px wide · Max 10 MB each</p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">
-              <Plus size={14} /> Choose photos
-            </div>
+          <div className="flex items-center justify-between">
+            <h2 className="font-display font-bold text-navy-900">Property photos</h2>
+            <Badge variant={photos.length > 0 ? 'green' : 'amber'}>{photos.length} / {MAX_TOTAL} added</Badge>
           </div>
 
-          {uploadedCount > 0 && (
-            <div className="flex items-center gap-2 rounded-[10px] bg-success-50 border border-success-500 px-4 py-3">
-              <CheckCircle size={16} className="text-success-700 shrink-0" />
-              <p className="text-sm font-semibold text-success-700">{uploadedCount} photo{uploadedCount > 1 ? 's' : ''} uploaded</p>
-            </div>
-          )}
-
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display font-bold text-navy-900">Gallery checklist</h2>
-              <Badge variant={uploadedCount >= 4 ? 'green' : 'amber'}>{Math.min(uploadedCount, 4)} / 4 required</Badge>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {MEDIA_CHECKLIST.map(({ label, required, hint }, i) => (
-                <div key={label} className="flex items-center justify-between rounded-[10px] border border-border p-3 bg-white">
+          {PHOTO_CATEGORIES.map(({ id, label, required, hint }) => {
+            const catPhotos = photos.filter((p) => p.category === id)
+            return (
+              <div key={id} className="rounded-[12px] border border-border p-4 bg-white">
+                <div className="flex items-center justify-between mb-2">
                   <div>
-                    <p className="text-sm font-semibold text-navy-900">{label}</p>
-                    <p className="text-xs text-navy-500">{i < uploadedCount ? 'Uploaded ✓' : required ? 'Not uploaded yet' : hint}</p>
+                    <p className="text-sm font-semibold text-navy-900">
+                      {label}{required && <span className="text-error-500 ml-0.5">*</span>}
+                    </p>
+                    <p className="text-xs text-navy-500">{hint}</p>
                   </div>
-                  <Badge variant={i < uploadedCount ? 'green' : required ? 'amber' : 'grey'}>
-                    {i < uploadedCount ? 'Ready' : hint}
-                  </Badge>
+                  <label className={cn(
+                    'inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors',
+                    busy === id ? 'border-navy-200 text-navy-400 pointer-events-none' : 'border-primary-600 text-primary-700 hover:bg-primary-50',
+                  )}>
+                    {busy === id ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    Add
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      multiple
+                      className="sr-only"
+                      onChange={(e) => { addFiles(id, e.target.files); e.target.value = '' }}
+                    />
+                  </label>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                {catPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+                    {catPhotos.map((p) => (
+                      <div key={p.id} className="relative group aspect-[4/3] overflow-hidden rounded-[8px] border border-border">
+                        <PhotoTile src={p.url} alt={label} className="w-full h-full" />
+                        {p.isPrimary && (
+                          <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-[6px] bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            <Star size={9} className="fill-white" /> Cover
+                          </span>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {!p.isPrimary && (
+                            <button
+                              type="button"
+                              onClick={() => setCover(p.id)}
+                              className="rounded-[6px] bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-navy-700 hover:bg-white"
+                            >
+                              Set cover
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(p.id)}
+                            className="ml-auto rounded-[6px] bg-error-500/90 p-1 text-white hover:bg-error-500"
+                            aria-label="Remove photo"
+                          >
+                            <X size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
 
           <FieldWrapper label="Photo notes for reviewer" hint="Optional — mention renovations, seasonal views, or anything the photos don't show.">
             <Textarea
@@ -547,9 +765,17 @@ const ROOM_AMENITIES = [
   'Attached bath', 'Safe', 'Work desk', 'Kitchenette',
 ]
 
+const ROOM_TYPE_OPTIONS = [
+  { value: 'ac',     label: 'AC room' },
+  { value: 'nonac',  label: 'Non-AC room' },
+  { value: 'dorm',   label: 'Dormitory' },
+  { value: 'suite',  label: 'Suite' },
+] as const
+
 const roomSchema = z.object({
   id:           z.string(),
   name:         z.string().min(2, 'Required'),
+  type:         z.enum(['ac', 'nonac', 'dorm', 'suite']),
   count:        z.number().min(1, 'At least 1 room'),
   maxOccupancy: z.number().min(1).max(10),
   bedType:      z.string().min(1, 'Select bed type'),
@@ -559,15 +785,72 @@ const roomSchema = z.object({
   fulldayRate:  z.number().min(500).optional(),
 })
 
+const houseRulesSchema = z.object({
+  couple_friendly:   z.enum(['yes', 'no', 'on_request']),
+  pet_friendly:      z.enum(['yes', 'no', 'on_request']),
+  party_allowed:     z.enum(['yes', 'no', 'on_request']),
+  outside_food:      z.enum(['yes', 'no', 'on_request']),
+  alcohol_allowed:   z.enum(['yes', 'no', 'not_allowed']),
+  smoking_allowed:   z.enum(['yes', 'no', 'designated_area']),
+  bachelor_groups:   z.enum(['yes', 'no']),
+  id_proof_required: z.enum(['yes', 'no']),
+  noiseCutoffTime:   z.string().optional(),
+  alcoholPolicyNote: z.string().max(200, 'Max 200 characters').optional(),
+})
+type HouseRulesData = z.infer<typeof houseRulesSchema>
+
 const step4Schema = z.object({
-  rooms:         z.array(roomSchema).min(1, 'Add at least one room type'),
-  smartPricing:  z.boolean(),
+  rooms:           z.array(roomSchema).min(1, 'Add at least one room type'),
+  smartPricing:    z.boolean(),
+  seatingCapacity: z.number().min(50, 'Min 50').max(5000, 'Max 5000').optional(),
+  houseRules:      houseRulesSchema,
 })
 type Step4Data = z.infer<typeof step4Schema>
 type RoomData = z.infer<typeof roomSchema>
 
+const YNR = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+  { value: 'on_request', label: 'On request' },
+]
+const YN = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+]
+const HOUSE_RULE_FIELDS: {
+  key: keyof HouseRulesData
+  label: string
+  options: { value: string; label: string }[]
+}[] = [
+  { key: 'couple_friendly',   label: 'Couple friendly',      options: YNR },
+  { key: 'pet_friendly',      label: 'Pet friendly',         options: YNR },
+  { key: 'party_allowed',     label: 'Parties allowed',      options: YNR },
+  { key: 'outside_food',      label: 'Outside food',         options: YNR },
+  { key: 'alcohol_allowed',   label: 'Alcohol allowed',      options: [
+    { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'not_allowed', label: 'Not allowed' },
+  ] },
+  { key: 'smoking_allowed',   label: 'Smoking allowed',      options: [
+    { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'designated_area', label: 'Designated area' },
+  ] },
+  { key: 'bachelor_groups',   label: 'Bachelor groups',      options: YN },
+  { key: 'id_proof_required', label: 'ID proof required',    options: YN },
+]
+
+const DEFAULT_HOUSE_RULES: HouseRulesData = {
+  couple_friendly:   'yes',
+  pet_friendly:      'no',
+  party_allowed:     'no',
+  outside_food:      'on_request',
+  alcohol_allowed:   'no',
+  smoking_allowed:   'no',
+  bachelor_groups:   'yes',
+  id_proof_required: 'yes',
+  noiseCutoffTime:   '',
+  alcoholPolicyNote: '',
+}
+
 const DEFAULT_ROOMS: RoomData[] = [
-  { id: 'r1', name: 'Standard room', count: 8, maxOccupancy: 2, bedType: 'King', sizeNote: '220 sqft', amenities: ['AC', 'TV', 'Attached bath'], hourlyRate: 299, fulldayRate: 2999 },
+  { id: 'r1', name: 'Standard room', type: 'ac', count: 8, maxOccupancy: 2, bedType: 'King', sizeNote: '220 sqft', amenities: ['AC', 'TV', 'Attached bath'], hourlyRate: 299, fulldayRate: 2999 },
 ]
 
 function tiers(base: number) {
@@ -606,9 +889,14 @@ function RoomCard({ room, onUpdate, onDelete, bookingPolicy }: {
 
       {open && (
         <div className="border-t border-border p-5 space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FieldWrapper label="Room name">
               <Input value={room.name} onChange={(e) => onUpdate({ ...room, name: e.target.value })} />
+            </FieldWrapper>
+            <FieldWrapper label="Room type" required>
+              <Select value={room.type} onChange={(e) => onUpdate({ ...room, type: e.target.value as RoomData['type'] })}>
+                {ROOM_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
             </FieldWrapper>
             <FieldWrapper label="Total rooms">
               <Input type="number" min={1} value={room.count} onChange={(e) => onUpdate({ ...room, count: Number(e.target.value) })} />
@@ -686,16 +974,38 @@ export function Step4LegalTax() {
   const category = step1Data?.propertyCategory ?? 'mid'
   const commission = COMMISSION_BY_CATEGORY[category] ?? PLATFORM_COMMISSION
 
+  const propertyType = step2Data?.propertyType ?? 'hotel'
+  const isBanquet = propertyType === 'banquet'
+
   const [rooms, setRooms] = useState<RoomData[]>(stored?.rooms as RoomData[] ?? DEFAULT_ROOMS)
   const [smartPricing, setSmartPricing] = useState(stored?.smartPricing ?? true)
-  const { triggerSave } = useOnboardingAutoSave(4)
+  const [seatingCapacity, setSeatingCapacity] = useState<number | undefined>(
+    (stored as { seatingCapacity?: number } | undefined)?.seatingCapacity,
+  )
+  const [houseRules, setHouseRules] = useState<HouseRulesData>(
+    (stored as { houseRules?: HouseRulesData } | undefined)?.houseRules ?? DEFAULT_HOUSE_RULES,
+  )
+  const roomsRef = useRef({ rooms, smartPricing, seatingCapacity, houseRules })
+  roomsRef.current = { rooms, smartPricing, seatingCapacity, houseRules }
+  const { triggerSave } = useOnboardingAutoSave(4, async () => {
+    const base = step4Schema.safeParse(roomsRef.current).success
+    // seatingCapacity is server-required only for banquet properties.
+    const seatingOk = !isBanquet
+      || (typeof roomsRef.current.seatingCapacity === 'number'
+        && roomsRef.current.seatingCapacity >= 50
+        && roomsRef.current.seatingCapacity <= 5000)
+    return base && seatingOk
+  })
 
-  useEffect(() => { triggerSave({ rooms, smartPricing } as Record<string, unknown>) }, [JSON.stringify(rooms), smartPricing])
+  useEffect(() => {
+    triggerSave({ rooms, smartPricing, seatingCapacity, houseRules } as Record<string, unknown>)
+  }, [JSON.stringify(rooms), smartPricing, seatingCapacity, JSON.stringify(houseRules)])
 
   const addRoom = () => {
     const newRoom: RoomData = {
       id: `r${Date.now()}`,
       name: 'New room type',
+      type: 'ac',
       count: 4,
       maxOccupancy: 2,
       bedType: 'King',
@@ -722,14 +1032,14 @@ export function Step4LegalTax() {
         <div className="flex-1">
           <p className="font-display font-bold text-navy-900">Commission — {commission}% platform fee</p>
           <p className="text-sm text-navy-600 mt-1">
-            Stayflex charges <strong>{commission}%</strong> on each completed booking.
+            EzyHotels charges <strong>{commission}%</strong> on each completed booking.
             {exampleNet && exampleRoom?.hourlyRate && (
               <> At <strong>₹{exampleRoom.hourlyRate}/hr</strong>, you receive <strong>₹{exampleNet}/hr</strong> net.</>
             )}
             {' '}Settled D+1 directly to your bank account.
           </p>
           <p className="text-xs text-navy-400 mt-1">
-            Rate based on your <strong className="capitalize">{category}</strong> property category. Custom rates can be set by Stayflex admin.
+            Rate based on your <strong className="capitalize">{category}</strong> property category. Custom rates can be set by EzyHotels admin.
           </p>
         </div>
       </div>
@@ -750,13 +1060,78 @@ export function Step4LegalTax() {
         </Button>
       </div>
 
+      {/* Banquet seating capacity — only for banquet properties */}
+      {isBanquet && (
+        <Card>
+          <h2 className="font-display font-bold text-navy-900 mb-1">Seating capacity</h2>
+          <p className="text-xs text-navy-500 mb-4">Banquet properties must declare their guest seating capacity (50–5000).</p>
+          <FieldWrapper
+            label="Maximum seating capacity"
+            required
+            error={
+              typeof seatingCapacity !== 'number' || seatingCapacity < 50 || seatingCapacity > 5000
+                ? 'Enter a value between 50 and 5000'
+                : undefined
+            }
+          >
+            <Input
+              type="number"
+              min={50}
+              max={5000}
+              value={seatingCapacity ?? ''}
+              onChange={(e) => setSeatingCapacity(e.target.value === '' ? undefined : Number(e.target.value))}
+              className="w-48"
+              placeholder="e.g. 250"
+            />
+          </FieldWrapper>
+        </Card>
+      )}
+
+      {/* House rules — category-defining data for pay-by-hour bookings */}
+      <Card>
+        <h2 className="font-display font-bold text-navy-900 mb-1">House rules</h2>
+        <p className="text-xs text-navy-500 mb-4">
+          These policies shape which guests and bookings your property accepts. They appear on your public listing.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {HOUSE_RULE_FIELDS.map(({ key, label, options }) => (
+            <FieldWrapper key={key} label={label} required>
+              <Select
+                value={houseRules[key] as string}
+                onChange={(e) => setHouseRules((prev) => ({ ...prev, [key]: e.target.value }) as HouseRulesData)}
+              >
+                {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            </FieldWrapper>
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 mt-4">
+          <FieldWrapper label="Noise cut-off time" hint="Optional — quiet hours start">
+            <Input
+              type="time"
+              value={houseRules.noiseCutoffTime ?? ''}
+              onChange={(e) => setHouseRules((prev) => ({ ...prev, noiseCutoffTime: e.target.value }))}
+              className="w-40"
+            />
+          </FieldWrapper>
+          <FieldWrapper label="Alcohol policy note" hint="Optional — max 200 characters">
+            <Input
+              value={houseRules.alcoholPolicyNote ?? ''}
+              onChange={(e) => setHouseRules((prev) => ({ ...prev, alcoholPolicyNote: e.target.value }))}
+              maxLength={200}
+              placeholder="e.g. Alcohol allowed only in designated lounge"
+            />
+          </FieldWrapper>
+        </div>
+      </Card>
+
       {/* Smart pricing */}
       <Card>
         <div className="flex items-start gap-4">
           <div className="flex-1">
             <p className="font-display font-bold text-navy-900">Smart pricing</p>
             <p className="text-sm text-navy-600 mt-1">
-              Stayflex automatically adjusts your prices up to ±20% based on real-time demand, day-of-week, and local events.
+              EzyHotels automatically adjusts your prices up to ±20% based on real-time demand, day-of-week, and local events.
               Owners using smart pricing earn <strong>18% more</strong> on average.
             </p>
           </div>
@@ -777,30 +1152,78 @@ export function Step4LegalTax() {
 
 // ── Step 5 — Documents & KYC ────────────────────────────────────────────────
 
+// Contract §3 DocumentType values used by the portal doc lanes.
+type DocumentType =
+  | 'pan_card' | 'id_proof' | 'rental_agreement' | 'cancelled_cheque'
+  | 'gstin_certificate' | 'fire_safety_cert' | 'fssai_license' | 'trade_license'
+  | 'partnership_deed' | 'llp_agreement' | 'incorporation_certificate'
+  | 'board_resolution'
+
+interface DocDef {
+  id: string          // portal docId (UI key)
+  type: DocumentType  // contract §3 DocumentType
+  label: string
+  required: boolean
+  show: boolean
+}
+
+interface DocValue { type: DocumentType; url: string }
+
+// Amenity ids that trigger the FSSAI requirement (contract §2 REQUIRES_FSSAI).
+const FSSAI_AMENITIES = new Set(['restaurant', 'bar', 'room_service'])
+
+// Minimal gate: fire_safety_cert must be present before Continue.
+const docsGateSchema = z
+  .array(z.object({ type: z.string(), url: z.string().url() }))
+  .refine((docs) => docs.some((d) => d.type === 'fire_safety_cert'), 'Upload the fire safety certificate before continuing.')
+
 export function Step5Documents() {
   const step1Data = useOnboardingStore((s) => s.stepData[1] as Partial<Step1Data> | undefined)
+  const amenities = useOnboardingStore((s) => (s.stepData[2] as { amenities?: string[] } | undefined)?.amenities)
   const entity = step1Data?.businessEntity ?? 'individual'
   const hasGST = !!(step1Data?.gstNumber)
-  const isCompany = entity === 'llp' || entity === 'pvtltd'
+  const isCompany = entity !== 'individual' && entity !== 'sole_proprietor'
+  const needsFssai = Array.isArray(amenities) && amenities.some((a) => FSSAI_AMENITIES.has(a))
 
-  const stored = useOnboardingStore((s) => s.stepData[5] as Record<string, boolean> | undefined)
-  const [docs, setDocs] = useState<Record<string, boolean>>(stored ?? {})
-  const { triggerSave } = useOnboardingAutoSave(5)
-  useEffect(() => { triggerSave(docs) }, [JSON.stringify(docs)])
+  // docId → uploaded url. Restored from persisted stepData on reload.
+  const stored = useOnboardingStore((s) => s.stepData[5] as { docUrls?: Record<string, string> } | undefined)
+  const [urls, setUrls] = useState<Record<string, string>>(stored?.docUrls ?? {})
 
-  const DOCS = [
-    { id: 'pan',       label: 'PAN card',                    required: true,    show: true },
-    { id: 'aadhaar',   label: 'Aadhaar card',                required: !isCompany, show: !isCompany },
-    { id: 'ownership', label: 'Property ownership / lease',  required: true,    show: true },
-    { id: 'cheque',    label: 'Cancelled cheque',            required: true,    show: true },
-    { id: 'gst_cert',  label: 'GST certificate',             required: hasGST,  show: hasGST },
-    { id: 'fire_noc',  label: 'Fire NOC or local license',   required: false,   show: true },
-    { id: 'trade',     label: 'Trade license',               required: isCompany, show: isCompany },
-    { id: 'director',  label: 'Director / Partner ID proof', required: isCompany, show: isCompany },
-  ].filter((d) => d.show)
+  const ALL_DOCS: DocDef[] = [
+    { id: 'pan',       type: 'pan_card',                  label: 'PAN card',                   required: true,      show: true },
+    { id: 'aadhaar',   type: 'id_proof',                  label: 'Aadhaar / ID proof',         required: !isCompany, show: !isCompany },
+    { id: 'ownership', type: 'rental_agreement',          label: 'Property ownership / lease', required: true,      show: true },
+    { id: 'cheque',    type: 'cancelled_cheque',          label: 'Cancelled cheque',           required: true,      show: true },
+    { id: 'gst_cert',  type: 'gstin_certificate',         label: 'GST certificate',            required: hasGST,    show: hasGST },
+    { id: 'fire_noc',  type: 'fire_safety_cert',          label: 'Fire safety certificate',    required: true,      show: true },
+    { id: 'fssai',     type: 'fssai_license',             label: 'FSSAI license',              required: needsFssai, show: needsFssai },
+    { id: 'trade',     type: 'trade_license',             label: 'Trade license',              required: false,     show: isCompany },
+    { id: 'partnership_deed',          type: 'partnership_deed',          label: 'Partnership deed',            required: true, show: entity === 'partnership' },
+    { id: 'llp_agreement',             type: 'llp_agreement',             label: 'LLP agreement',               required: true, show: entity === 'llp' },
+    { id: 'incorporation_certificate', type: 'incorporation_certificate', label: 'Certificate of incorporation', required: true, show: entity === 'llp' || entity === 'private_limited' || entity === 'public_limited' },
+    { id: 'director',                  type: 'board_resolution',          label: 'Board resolution',            required: true, show: entity === 'private_limited' || entity === 'public_limited' },
+  ]
+  const DOCS = ALL_DOCS.filter((d) => d.show)
+
+  // Server-ready documents array (docId already resolved to DocumentType).
+  const documents: DocValue[] = DOCS.filter((d) => urls[d.id]).map((d) => ({ type: d.type, url: urls[d.id] }))
+
+  const validate = useCallback(async () => {
+    const result = docsGateSchema.safeParse(documents)
+    if (!result.success) {
+      toast.error(result.error.issues[0]?.message ?? 'Upload the required documents.')
+      return false
+    }
+    return true
+  }, [JSON.stringify(documents)])
+
+  const { triggerSave } = useOnboardingAutoSave(5, validate)
+  useEffect(() => {
+    triggerSave({ docUrls: urls, documents })
+  }, [JSON.stringify(urls)])
 
   const required = DOCS.filter((d) => d.required)
-  const uploaded = required.filter((d) => docs[d.id])
+  const uploaded = required.filter((d) => urls[d.id])
 
   return (
     <div className="space-y-6">
@@ -812,7 +1235,7 @@ export function Step5Documents() {
             <p className="text-sm font-semibold text-navy-900 mb-2">Required for {entity === 'individual' ? 'individuals' : 'companies'}</p>
             <p className="text-xs text-navy-500">
               {isCompany
-                ? 'Company registrations need company PAN, GST, director IDs, and ownership proof.'
+                ? 'Company registrations need company PAN, GST, ownership proof, and entity registration documents.'
                 : 'Individual listings need personal PAN, Aadhaar, and property ownership documents.'}
             </p>
             <div className="mt-3 flex items-center gap-2">
@@ -832,9 +1255,10 @@ export function Step5Documents() {
                 accept=".pdf,.jpg,.jpeg,.png"
                 maxSizeMB={10}
                 required={req}
+                value={urls[id]}
                 onUpload={async (file) => {
-                  await uploadDocument(file, id)
-                  setDocs((prev) => ({ ...prev, [id]: true }))
+                  const { url } = await uploadFile(file)
+                  setUrls((prev) => ({ ...prev, [id]: url }))
                   toast.success(`${label} uploaded`)
                 }}
               />
@@ -854,14 +1278,17 @@ const step6Schema = z.object({
   ifscCode:             z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC format'),
   bankName:             z.string().min(2, 'Required'),
   accountType:          z.enum(['savings', 'current']),
+  pan:                  z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN (e.g. ABCDE1234F)'),
   settlementPreference: z.enum(['d1', 'weekly']),
   tdsConsent:           z.boolean(),
+  tcAccepted:           z.boolean().refine((v) => v === true, 'You must accept the Terms & Conditions'),
+  formCAcknowledged:    z.boolean().refine((v) => v === true, 'You must acknowledge the Form C declaration'),
 })
 type Step6Data = z.infer<typeof step6Schema>
 
 export function Step6BankAccount() {
   const stored = useOnboardingStore((s) => s.stepData[6] as Partial<Step6Data> | undefined)
-  const { register, watch, setValue, formState: { errors } } = useForm<Step6Data>({
+  const { register, watch, setValue, trigger, formState: { errors } } = useForm<Step6Data>({
     resolver: zodResolver(step6Schema),
     defaultValues: {
       accountHolderName: stored?.accountHolderName ?? '',
@@ -869,13 +1296,16 @@ export function Step6BankAccount() {
       ifscCode: stored?.ifscCode ?? '',
       bankName: stored?.bankName ?? '',
       accountType: stored?.accountType ?? 'savings',
+      pan: stored?.pan ?? '',
       settlementPreference: stored?.settlementPreference ?? 'd1',
       tdsConsent: stored?.tdsConsent ?? false,
+      tcAccepted: stored?.tcAccepted ?? false,
+      formCAcknowledged: stored?.formCAcknowledged ?? false,
     },
   })
 
   const values = watch()
-  const { triggerSave } = useOnboardingAutoSave(6)
+  const { triggerSave } = useOnboardingAutoSave(6, () => trigger())
   useEffect(() => { triggerSave(values as Record<string, unknown>) }, [JSON.stringify(values)])
 
   const [ifscStatus, setIfscStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
@@ -993,6 +1423,36 @@ export function Step6BankAccount() {
               A Form 16A will be issued quarterly.
             </span>
           </label>
+
+          {/* Legal & declarations */}
+          <div className="border-t border-border pt-5 space-y-4">
+            <p className="text-sm font-semibold text-navy-800">Legal & declarations</p>
+            <FieldWrapper label="PAN (of owner / business)" required error={errors.pan?.message} hint="10-character PAN, e.g. ABCDE1234F" className="sm:w-72">
+              <Input
+                {...register('pan', { setValueAs: (v) => (typeof v === 'string' ? v.toUpperCase() : v) })}
+                placeholder="ABCDE1234F"
+                maxLength={10}
+                className="font-mono uppercase"
+                error={!!errors.pan}
+              />
+            </FieldWrapper>
+
+            <label className="flex items-start gap-3 cursor-pointer rounded-[10px] border border-border p-4 hover:bg-navy-50">
+              <input {...register('tcAccepted')} type="checkbox" className="mt-0.5 h-4 w-4 accent-primary-600 shrink-0" />
+              <span className="text-sm text-navy-600">
+                I accept EzyHotels's <a href="#" className="text-primary-600 font-semibold hover:underline">Partner Terms &amp; Conditions</a> and Commission Schedule.
+              </span>
+            </label>
+            {errors.tcAccepted && <p className="text-xs text-error-500 -mt-2">{errors.tcAccepted.message}</p>}
+
+            <label className="flex items-start gap-3 cursor-pointer rounded-[10px] border border-border p-4 hover:bg-navy-50">
+              <input {...register('formCAcknowledged')} type="checkbox" className="mt-0.5 h-4 w-4 accent-primary-600 shrink-0" />
+              <span className="text-sm text-navy-600">
+                I acknowledge my obligation to file <strong>Form C</strong> (foreign guest registration) with local authorities where applicable.
+              </span>
+            </label>
+            {errors.formCAcknowledged && <p className="text-xs text-error-500 -mt-2">{errors.formCAcknowledged.message}</p>}
+          </div>
         </div>
       </TwoCol>
     </div>
@@ -1000,6 +1460,25 @@ export function Step6BankAccount() {
 }
 
 // ── Step 7 — Review & submit ────────────────────────────────────────────────
+
+interface SubmitErrorBody {
+  statusCode?: number
+  message?: string
+  error?: { step?: number; errors?: Array<{ field?: string; constraints?: string[] }> } | string
+}
+
+// Turn the server's structured submit rejection into a specific, actionable
+// message (e.g. "Step 3: hourlyRate is required for this booking policy")
+// instead of a generic "submission failed".
+function describeSubmitError(data: SubmitErrorBody | undefined): string {
+  const e = data?.error
+  if (e && typeof e === 'object' && Array.isArray(e.errors) && e.errors.length > 0) {
+    const first = e.errors[0]
+    const detail = first.constraints?.[0] ?? `${first.field ?? 'A field'} is invalid`
+    return e.step ? `Step ${e.step}: ${detail}` : detail
+  }
+  return data?.message ?? 'Submission failed. Please review your details and try again.'
+}
 
 export function Step7ReviewSubmit() {
   const stepData = useOnboardingStore((s) => s.stepData)
@@ -1010,6 +1489,8 @@ export function Step7ReviewSubmit() {
 
   const [agreed, setAgreed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const navigate = useNavigate()
+  const completeStep = useOnboardingStore((s) => s.completeStep)
 
   const commission = COMMISSION_BY_CATEGORY[s1?.propertyCategory ?? 'mid'] ?? PLATFORM_COMMISSION
 
@@ -1061,10 +1542,19 @@ export function Step7ReviewSubmit() {
     setSubmitting(true)
     try {
       await submitOnboarding(draftId)
+      completeStep(7)
       toast.success('Application submitted! Verification takes 24 hours.')
-      // navigate to status — WizardShell will handle this via its Continue button
-    } catch {
-      toast.error('Submission failed. Please try again.')
+      navigate({ to: '/owner/status' })
+    } catch (err) {
+      const data = (err as { response?: { data?: SubmitErrorBody } })?.response?.data
+      // Already submitted/approved → not an error the owner can fix; send them to status.
+      if (data?.statusCode === 409) {
+        toast.error(data.message ?? 'This property has already been submitted.')
+        navigate({ to: '/owner/status' })
+      } else {
+        // Surface the exact step + field the server rejected instead of a generic message.
+        toast.error(describeSubmitError(data))
+      }
     } finally {
       setSubmitting(false)
     }
@@ -1080,7 +1570,7 @@ export function Step7ReviewSubmit() {
 
   return (
     <div className="space-y-6">
-      <StepHeader step={7} title="Review & submit" subtitle="One final check before the Stayflex verification team reviews your listing." />
+      <StepHeader step={7} title="Review & submit" subtitle="One final check before the EzyHotels verification team reviews your listing." />
 
       {/* Earnings summary */}
       {estimatedEarning && (
@@ -1140,7 +1630,7 @@ export function Step7ReviewSubmit() {
           />
           <span className="text-sm text-navy-700 leading-relaxed">
             I confirm that all information provided is accurate and up-to-date. I am the legal owner or authorised representative of this property
-            and I accept Stayflex's{' '}
+            and I accept EzyHotels's{' '}
             <a href="#" className="text-primary-600 font-semibold hover:underline">Partner Terms</a>,{' '}
             <a href="#" className="text-primary-600 font-semibold hover:underline">Privacy Policy</a>, and{' '}
             <a href="#" className="text-primary-600 font-semibold hover:underline">Commission Schedule</a>.

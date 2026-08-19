@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 
 const PALETTES = [
-  ['#FF8F00', '#E65100', '#FFC107'],
+  ['#F05A00', '#C74800', '#FFC107'],
   ['#0F172A', '#475569', '#94A3B8'],
   ['#14B8A6', '#0F766E', '#5EEAD4'],
   ['#7C3AED', '#4C1D95', '#C4B5FD'],

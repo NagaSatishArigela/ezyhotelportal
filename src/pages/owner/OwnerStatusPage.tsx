@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { getPropertyStatus } from '@/lib/portal-api'
+import { getPropertyStatus, latestRevisionItems, type RevisionItem } from '@/lib/portal-api'
 import {
   Clock, ArrowRight, CheckCircle2, Circle, Camera, Lock, AlertTriangle,
   RefreshCw, LayoutDashboard, Phone,
@@ -25,7 +25,7 @@ const STEPS = [
 
 
 export function OwnerStatusPage() {
-  const { onboardingStatus } = useAuth()
+  const { onboardingStatus, user } = useAuth()
   const navigate = useNavigate()
   const { completedSteps, currentStep, draftId } = useOnboardingStore(
     useShallow((s) => ({
@@ -35,14 +35,24 @@ export function OwnerStatusPage() {
     }))
   )
 
-  // Refresh live status from backend if we have a draft ID
+  // The status endpoint is keyed on the property id. Prefer the local draft id,
+  // fall back to the id carried on the authenticated user (set at login).
+  const propertyId = draftId ?? user?.propertyId ?? null
+
+  // Refresh live status from backend if we have a property id
   const [liveTimeline, setLiveTimeline] = useState<{ label: string; status: 'done' | 'current' | 'pending'; at: string | null }[]>([])
+  const [revisionItems, setRevisionItems] = useState<RevisionItem[]>([])
+  const [revisionLoaded, setRevisionLoaded] = useState(false)
   useEffect(() => {
-    if (!draftId) return
-    getPropertyStatus(draftId)
-      .then((res) => { if (res.timeline) setLiveTimeline(res.timeline) })
+    if (!propertyId) { setRevisionLoaded(true); return }
+    getPropertyStatus(propertyId)
+      .then((res) => {
+        if (res.timeline) setLiveTimeline(res.timeline)
+        setRevisionItems(latestRevisionItems(res.revisionNotes))
+      })
       .catch(() => { /* use static fallback */ })
-  }, [draftId])
+      .finally(() => setRevisionLoaded(true))
+  }, [propertyId])
   void liveTimeline // used by timeline renders below
 
   const firstIncompleteStep = STEPS.find((s) => !completedSteps.includes(s.number))?.number ?? currentStep ?? 1
@@ -214,7 +224,7 @@ export function OwnerStatusPage() {
               <a href="tel:+918049009000" className="text-primary-600 font-semibold hover:underline">
                 +91 80-4900-9000
               </a>{' '}
-              or email <span className="text-primary-600 font-semibold">partners@stayflex.in</span>
+              or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
             </p>
           </div>
         </div>
@@ -235,17 +245,30 @@ export function OwnerStatusPage() {
 
         <StatusTracker status={onboardingStatus} referenceId={draftId ?? undefined} />
 
-        {/* Revision notes placeholder */}
+        {/* Revision notes — the exact items the admin flagged for this property */}
         <div className="rounded-(--radius-lg) border border-warning-400 bg-warning-50 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle size={18} className="text-warning-600 shrink-0 mt-0.5" />
-            <div>
+            <div className="flex-1">
               <p className="font-semibold text-navy-900">Reviewer notes</p>
-              <ul className="mt-2 space-y-1.5 text-sm text-navy-600">
-                <li>• Please upload a clearer photo of the property entrance</li>
-                <li>• PAN card scan is blurry — re-upload a high-resolution copy</li>
-                <li>• Update the description to include check-in timings</li>
-              </ul>
+              {revisionItems.length > 0 ? (
+                <ul className="mt-2 space-y-2 text-sm text-navy-600">
+                  {revisionItems.map((item, i) => (
+                    <li key={i}>
+                      <span className="font-semibold text-navy-800">{item.field}:</span>{' '}
+                      {item.reason}
+                    </li>
+                  ))}
+                </ul>
+              ) : revisionLoaded ? (
+                <p className="mt-2 text-sm text-navy-600">
+                  Our team has requested changes. Review each section below, update the flagged
+                  details, and resubmit. If you need specifics, contact your onboarding manager at{' '}
+                  <a href="tel:+918049009000" className="text-primary-600 font-semibold">+91 80-4900-9000</a>.
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-navy-500">Loading reviewer notes…</p>
+              )}
             </div>
           </div>
         </div>
@@ -313,7 +336,29 @@ export function OwnerStatusPage() {
             Contact your onboarding manager to understand the reason and whether you can relist.
             Call{' '}
             <a href="tel:+918049009000" className="text-primary-600 font-semibold">+91 80-4900-9000</a>
-            {' '}or email <span className="text-primary-600 font-semibold">partners@stayflex.in</span>
+            {' '}or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Suspended ─────────────────────────────────────────────────────────────
+  if (onboardingStatus === 'suspended') {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-navy-900">Listing suspended</h1>
+          <p className="text-navy-500 text-sm mt-1">Your property is not currently accepting bookings.</p>
+        </div>
+        <StatusTracker status="suspended" referenceId={draftId ?? undefined} />
+        <div className="rounded-(--radius-lg) border border-border bg-white p-5 shadow-1">
+          <p className="font-semibold text-navy-900 mb-2">Next steps</p>
+          <p className="text-sm text-navy-600">
+            Your listing has been suspended by our team. Contact your onboarding manager to
+            understand the reason and how to reinstate it. Call{' '}
+            <a href="tel:+918049009000" className="text-primary-600 font-semibold">+91 80-4900-9000</a>
+            {' '}or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
           </p>
         </div>
       </div>

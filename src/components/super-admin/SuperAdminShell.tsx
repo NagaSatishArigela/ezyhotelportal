@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { LayoutDashboard, Users, Settings, LogOut, Menu, Zap } from 'lucide-react'
+import { LayoutDashboard, Users, Settings, LogOut, Menu } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useUIStore } from '@/store/ui.store'
@@ -38,12 +39,12 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
           {/* Logo */}
           <div className={cn('flex h-16 items-center border-b border-border px-4', collapsed && 'justify-center px-0')}>
             {collapsed ? (
-              <Zap size={22} className="text-primary-600" aria-label="Stayflex Super Admin" />
+              <EzyMark size={26} aria-label="EzyHotels Super Admin" />
             ) : (
               <div className="flex items-center gap-2 select-none">
-                <Zap size={20} className="text-primary-600" aria-hidden />
-                <span className="font-display font-bold text-navy-900 leading-none">
-                  Stayflex<br />
+                <EzyMark size={28} className="shrink-0" />
+                <span className="font-display font-bold leading-none">
+                  <EzyWordmark /><br />
                   <span className="text-xs font-semibold text-primary-600 tracking-widest uppercase">
                     Super Admin
                   </span>

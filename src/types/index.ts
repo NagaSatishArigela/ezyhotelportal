@@ -8,6 +8,7 @@ export type OnboardingStatus =
   | 'revision_requested'
   | 'approved'
   | 'rejected'
+  | 'suspended'
 
 export interface User {
   id: string

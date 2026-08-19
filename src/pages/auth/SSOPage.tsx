@@ -27,50 +27,64 @@ export function SSOPage() {
     hasRun.current = true
 
     const params = new URLSearchParams(window.location.search)
-    const at = params.get('at')
-    const rt = params.get('rt') ?? undefined
-    const ph = params.get('ph') ?? ''
-    const em = params.get('em') ?? ''
+    const code = params.get('code')
 
-    // Clear tokens from URL immediately — never leave credentials in browser history
+    // Clear params from URL immediately — the one-time code is single-use anyway.
     window.history.replaceState({}, '', '/sso')
 
-    if (!at) {
-      toast.error('Invalid sign-in link. Please register again.')
+    const fail = () => {
+      toast.error('Invalid or expired sign-in link. Please register again.')
       navigate({ to: '/login' })
+    }
+
+    if (!code) {
+      fail()
       return
     }
 
-    const payload = decodeJwtPayload(at)
-    if (!payload?.id || typeof payload.id !== 'string') {
-      toast.error('Expired or invalid link. Please register again.')
-      navigate({ to: '/login' })
-      return
+    const run = async () => {
+      // Redeem the one-time code at the web app for the real tokens. Tokens
+      // never travel in the URL. (PILOT: move redemption to the backend.)
+      const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'http://localhost:3001'
+      let tokens: { accessToken: string; refreshToken: string; phone?: string; email?: string }
+      try {
+        const res = await fetch(`${WEB_URL}/api/sso/handoff?code=${encodeURIComponent(code)}`)
+        if (!res.ok) return fail()
+        tokens = await res.json()
+      } catch {
+        return fail()
+      }
+
+      const payload = decodeJwtPayload(tokens.accessToken)
+      if (!payload?.id || typeof payload.id !== 'string') return fail()
+
+      // Phone/email arrive inside the redeemed payload, not the URL.
+      const ph = tokens.phone ?? ''
+      const em = tokens.email ?? ''
+      const nameHint = em.split('@')[0] ?? 'owner'
+      const initials = nameHint.slice(0, 2).toUpperCase()
+      const user = {
+        id: payload.id,
+        name: nameHint,
+        email: em,
+        phone: ph,
+        role: 'owner' as const,
+        onboardingStatus: 'not_started' as const,
+        onboardingStep: 1,
+        avatarInitials: initials,
+      }
+
+      setAuth(user, tokens.accessToken, false, tokens.refreshToken)
+
+      // Fresh onboarding — reset any previous draft then pre-fill Step 1
+      reset()
+      saveStepData(1, { phone: ph, email: em })
+
+      toast.success("Account created! Let's set up your property.")
+      navigate({ to: '/owner/onboarding/step1' })
     }
 
-    // Build the portal user from SSO params
-    const nameHint = em.split('@')[0] ?? 'owner'
-    const initials = nameHint.slice(0, 2).toUpperCase()
-    const user = {
-      id: payload.id,
-      name: nameHint,
-      email: em,
-      phone: ph,
-      role: 'owner' as const,
-      onboardingStatus: 'not_started' as const,
-      onboardingStep: 1,
-      avatarInitials: initials,
-    }
-
-    // Authenticate in the portal store
-    setAuth(user, at, false, rt)
-
-    // Fresh onboarding — reset any previous draft then pre-fill Step 1
-    reset()
-    saveStepData(1, { phone: ph, email: em })
-
-    toast.success("Account created! Let's set up your property.")
-    navigate({ to: '/owner/onboarding/step1' })
+    void run()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

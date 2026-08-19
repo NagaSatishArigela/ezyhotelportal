@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { LayoutDashboard, Ticket, Users, LogOut } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -20,11 +21,9 @@ export function SupportShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-navy-50">
       <aside className="hidden w-[220px] shrink-0 flex-col bg-white border-r border-border md:flex">
         <div className="flex h-16 items-center gap-2 px-5 border-b border-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
-            <span className="text-white font-display font-bold text-sm">S</span>
-          </div>
+          <EzyMark size={28} className="shrink-0" />
           <div>
-            <p className="font-display font-bold text-navy-900 text-sm">Stayflex</p>
+            <EzyWordmark className="font-display font-bold text-sm" />
             <p className="text-[10px] text-navy-400">Support</p>
           </div>
         </div>

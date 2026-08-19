@@ -1,21 +1,69 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   ClipboardCheck, Building2, BookOpen, Wallet,
-  AlertTriangle, Star, Users, BarChart2, LogOut, Zap,
+  AlertTriangle, Star, Users, BarChart2, LogOut,
 } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
+import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ReviewFlaggedBadge } from '@/pages/admin/AdminReviewsView'
+import { adminPropertiesApi } from '@/lib/api/adminProperties'
+import { adminPayoutsApi } from '@/lib/api/adminPayouts'
+import { adminDisputesApi } from '@/lib/api/adminDisputes'
 
-const NAV_ITEMS = [
-  { href: '/admin/verification', label: 'Verification Queue', icon: ClipboardCheck, badge: 12 },
+// Live count pill — shown next to a nav item, hidden when the count is zero so
+// the sidebar never displays a stale/fake number.
+function NavCountPill({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
+function VerificationQueueBadge() {
+  const { data } = useQuery({
+    queryKey: ['admin-verification-queue-count'],
+    queryFn: () => adminPropertiesApi.listQueue({ status: 'pending_review', limit: 1 }),
+    refetchInterval: 60_000,
+  })
+  return <NavCountPill count={data?.total ?? 0} />
+}
+
+function PayoutsPendingBadge() {
+  const { data } = useQuery({
+    queryKey: ['admin-payouts-pending-count'],
+    queryFn: () => adminPayoutsApi.summary(),
+    refetchInterval: 60_000,
+  })
+  return <NavCountPill count={data?.pendingBatches ?? 0} />
+}
+
+function DisputesUnresolvedBadge() {
+  const { data } = useQuery({
+    queryKey: ['admin-disputes-unresolved-count'],
+    queryFn: () => adminDisputesApi.unresolvedCount(),
+    refetchInterval: 60_000,
+  })
+  return <NavCountPill count={data?.count ?? 0} />
+}
+
+const NAV_ITEMS: Array<{
+  href: string
+  label: string
+  icon: typeof ClipboardCheck
+  Badge?: React.ComponentType
+}> = [
+  { href: '/admin/verification', label: 'Verification Queue', icon: ClipboardCheck, Badge: VerificationQueueBadge },
   { href: '/admin/properties',   label: 'Properties',         icon: Building2 },
   { href: '/admin/bookings',     label: 'Bookings',           icon: BookOpen },
-  { href: '/admin/payouts',      label: 'Payouts',            icon: Wallet,         badge: 3 },
-  { href: '/admin/disputes',     label: 'Disputes',           icon: AlertTriangle,  badge: 5 },
-  { href: '/admin/reviews',      label: 'Review Moderation',  icon: Star },
+  { href: '/admin/payouts',      label: 'Payouts',            icon: Wallet,         Badge: PayoutsPendingBadge },
+  { href: '/admin/disputes',     label: 'Disputes',           icon: AlertTriangle,  Badge: DisputesUnresolvedBadge },
+  { href: '/admin/reviews',      label: 'Review Moderation',  icon: Star,           Badge: ReviewFlaggedBadge },
   { href: '/admin/users',        label: 'Users',              icon: Users },
   { href: '/admin/analytics',    label: 'Analytics',          icon: BarChart2 },
 ]
@@ -29,19 +77,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-navy-50">
       <aside className="hidden w-[232px] shrink-0 flex-col bg-white border-r border-border md:flex">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
-            <Zap size={16} className="text-white" strokeWidth={2.4} aria-hidden />
-          </div>
+        <div className="flex h-16 items-center gap-2 px-5 border-b border-border">
+          <EzyMark size={30} className="shrink-0" />
           <div>
-            <p className="font-display font-bold text-navy-900 text-[15px] leading-none">stayflex</p>
+            <EzyWordmark className="font-display font-bold text-[15px] leading-none" />
             <p className="text-[10px] text-navy-400 uppercase tracking-wider mt-0.5">Admin Console</p>
           </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto thin-scroll py-3 space-y-0.5 px-2">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, badge }) => {
+          {NAV_ITEMS.map(({ href, label, icon: Icon, Badge }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link
@@ -56,13 +102,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={16} className="shrink-0" aria-hidden />
                 <span className="flex-1">{label}</span>
-                {href === '/admin/reviews' ? (
-                  <ReviewFlaggedBadge />
-                ) : badge !== undefined ? (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
-                    {badge}
-                  </span>
-                ) : null}
+                {Badge ? <Badge /> : null}
               </Link>
             )
           })}
@@ -103,7 +143,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <h1 className="font-display font-semibold text-navy-900 text-base">
               {NAV_ITEMS.find((n) => pathname === n.href || pathname.startsWith(n.href + '/'))?.label ?? 'Admin'}
             </h1>
-            <p className="text-xs text-navy-400">Stayflex Operations Console</p>
+            <p className="text-xs text-navy-400">EzyHotels Operations Console</p>
           </div>
         </header>
         <nav className="md:hidden flex gap-2 overflow-x-auto border-b border-border bg-white px-4 py-2" aria-label="Admin mobile navigation">

@@ -178,7 +178,7 @@ export function SuperAdminAdminsPage() {
               <Input {...register('phone')} placeholder="9988776655" data-testid="phone-input" />
             </FieldWrapper>
             <FieldWrapper label="Email (optional)" error={errors.email?.message}>
-              <Input {...register('email')} type="email" placeholder="admin@stayflex.in" data-testid="email-input" />
+              <Input {...register('email')} type="email" placeholder="admin@ezyhotels.com" data-testid="email-input" />
             </FieldWrapper>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>

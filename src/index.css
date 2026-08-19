@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Stayflex Design Tokens ── */
+/* ── EzyHotels Design Tokens ── */
 @theme {
   /* Fonts */
   --font-display: "Sora", sans-serif;
@@ -8,11 +8,11 @@
   --font-mono:    "JetBrains Mono", monospace;
 
   /* Primary — Amber */
-  --color-primary-50:  #FFF8E1;
-  --color-primary-100: #FFECB3;
-  --color-primary-500: #FFA000;
-  --color-primary-600: #FF8F00;
-  --color-primary-700: #E65100;
+  --color-primary-50:  #FEF3EC;
+  --color-primary-100: #FCDCC8;
+  --color-primary-500: #FB7A2E;
+  --color-primary-600: #F05A00;
+  --color-primary-700: #C74800;
 
   /* Navy / Neutral */
   --color-navy-50:  #F8FAFC;
@@ -43,14 +43,6 @@
   /* Surface */
   --color-border:   #E2E8F0;
   --color-surface:  #FFFFFF;
-
-  /* Admin dark */
-  --color-admin-bg:       #0A0F1C;
-  --color-admin-sidebar:  #070B14;
-  --color-admin-card:     #0F172A;
-  --color-admin-border:   #1E293B;
-  --color-admin-text:     #E2E8F0;
-  --color-admin-muted:    #94A3B8;
 
   /* Radii */
   --radius-sm:   6px;
@@ -137,7 +129,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Input glow state (applied via JS) */
 .input-glow {
   border-color: var(--color-primary-600) !important;
-  box-shadow: 0 0 0 3px rgba(255,143,0,0.15);
+  box-shadow: 0 0 0 3px rgba(240,90,0,0.15);
 }
 .input-error-glow {
   border-color: var(--color-error-500) !important;

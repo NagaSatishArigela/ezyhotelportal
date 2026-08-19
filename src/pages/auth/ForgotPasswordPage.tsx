@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Mail, CheckCircle, Zap } from 'lucide-react'
+import { ArrowLeft, Mail, CheckCircle } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { sleep } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,10 +36,8 @@ export function ForgotPasswordPage() {
         <div className="bg-white rounded-(--radius-xl) border border-border shadow-3 p-8">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600">
-              <Zap size={18} className="text-white" aria-hidden />
-            </div>
-            <span className="font-display font-bold text-navy-900">Stayflex</span>
+            <EzyMark size={34} className="shrink-0" />
+            <EzyWordmark className="font-display font-bold" />
           </div>
 
           {!sent ? (

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useShallow } from 'zustand/react/shallow'
-import { Zap, Shield, LogOut } from 'lucide-react'
+import { Shield, LogOut } from 'lucide-react'
+import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { toast } from 'sonner'
 import { useOnboardingStore } from '@/store/onboarding.store'
 import { useAuth } from '@/hooks/useAuth'
@@ -77,8 +78,9 @@ export function WizardShell({
       setIsSaving(true)
       try {
         await onBeforeNext()
-      } catch {
-        toast.error('Failed to save progress. Please try again.')
+      } catch (err) {
+        const isValidation = err instanceof Error && 'isValidation' in err
+        toast.error(isValidation ? err.message : 'Failed to save progress. Please try again.')
         setIsSaving(false)
         return
       }
@@ -97,12 +99,10 @@ export function WizardShell({
   return (
     <div className="flex h-screen overflow-hidden bg-navy-50">
       <aside className="hidden lg:flex w-80 shrink-0 flex-col bg-white border-r border-border">
-        <div className="flex h-16 items-center gap-2.5 px-7 border-b border-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
-            <Zap size={18} className="text-white" strokeWidth={2.4} aria-hidden />
-          </div>
+        <div className="flex h-16 items-center gap-2 px-7 border-b border-border">
+          <EzyMark size={30} className="shrink-0" />
           <div>
-            <span className="font-display font-bold text-navy-900 text-base">stayflex</span>
+            <EzyWordmark className="font-display font-bold text-base" />
             <span className="text-navy-400 font-normal text-sm ml-1">for partners</span>
           </div>
         </div>
@@ -193,9 +193,11 @@ export function WizardShell({
             <Button variant="outline" type="button" onClick={() => navigate({ to: "/owner/status" })}>
               Save & exit
             </Button>
-            <Button variant="primary" type="submit" onClick={handleNext} loading={nextLoading || isSaving} disabled={nextDisabled || isSaving}>
-              {activeStep >= WIZARD_STEPS.length ? 'Submit for review' : nextLabel} &rarr;
-            </Button>
+            {activeStep < WIZARD_STEPS.length && (
+              <Button variant="primary" type="submit" onClick={handleNext} loading={nextLoading || isSaving} disabled={nextDisabled || isSaving}>
+                {nextLabel} &rarr;
+              </Button>
+            )}
           </div>
         )}
       </div>
