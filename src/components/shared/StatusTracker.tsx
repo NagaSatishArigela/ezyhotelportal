@@ -1,4 +1,4 @@
-import { Check, Clock, AlertCircle, XCircle, Zap } from 'lucide-react'
+import { Check, Clock, AlertCircle, XCircle, Zap, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OnboardingStatus } from '@/types'
 
@@ -157,10 +157,28 @@ export function StatusTracker({ status, referenceId }: StatusTrackerProps) {
         )}
 
         {status === 'submitted' && (
-          <p className="text-center text-xs text-navy-500 mt-3 flex items-center justify-center gap-1">
-            <Clock size={12} aria-hidden />
-            Admin review SLA: 48 hours from submission
-          </p>
+          <div className="mt-5 space-y-4">
+            <p className="text-center text-sm font-medium text-navy-700">
+              Please wait for your verification message. We will email you when your application is reviewed.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="rounded-[10px] border border-border bg-white/80 px-3 py-3 text-center">
+                <Clock size={16} className="mx-auto mb-1 text-primary-600" aria-hidden />
+                <p className="text-xs font-semibold text-navy-900">Verification</p>
+                <p className="mt-0.5 text-xs text-navy-500">24–48 hours</p>
+              </div>
+              <div className="rounded-[10px] border border-border bg-white/80 px-3 py-3 text-center">
+                <Mail size={16} className="mx-auto mb-1 text-primary-600" aria-hidden />
+                <p className="text-xs font-semibold text-navy-900">Email notification</p>
+                <p className="mt-0.5 text-xs text-navy-500">We will keep you posted</p>
+              </div>
+              <div className="rounded-[10px] border border-border bg-white/80 px-3 py-3 text-center">
+                <Zap size={16} className="mx-auto mb-1 text-success-700" aria-hidden />
+                <p className="text-xs font-semibold text-navy-900">Go live</p>
+                <p className="mt-0.5 text-xs text-navy-500">Within 72 hours</p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

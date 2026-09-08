@@ -56,9 +56,10 @@ export function OwnerStatusPage() {
   void liveTimeline // used by timeline renders below
 
   const firstIncompleteStep = STEPS.find((s) => !completedSteps.includes(s.number))?.number ?? currentStep ?? 1
+  const submittedLocally = completedSteps.includes(7)
 
   // ── Draft in Progress ─────────────────────────────────────────────────────
-  if (onboardingStatus === 'in_progress' || onboardingStatus === 'not_started') {
+  if ((onboardingStatus === 'in_progress' || onboardingStatus === 'not_started') && !submittedLocally) {
     const doneCount = completedSteps.length
     const totalRequired = 7
 
@@ -152,7 +153,7 @@ export function OwnerStatusPage() {
   }
 
   // ── Submitted / Under review ─────────────────────────────────────────────
-  if (onboardingStatus === 'submitted' || onboardingStatus === 'under_review') {
+  if (onboardingStatus === 'submitted' || onboardingStatus === 'under_review' || submittedLocally) {
     return (
       <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
         <div>
@@ -160,7 +161,10 @@ export function OwnerStatusPage() {
           <p className="text-navy-500 text-sm mt-1">Track your property verification progress</p>
         </div>
 
-        <StatusTracker status={onboardingStatus} referenceId={draftId ?? undefined} />
+        <StatusTracker
+          status={submittedLocally ? 'submitted' : onboardingStatus}
+          referenceId={draftId ?? undefined}
+        />
 
         {/* What's editable */}
         <div className="rounded-(--radius-lg) border border-border bg-white shadow-1 overflow-hidden">

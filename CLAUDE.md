@@ -1,7 +1,7 @@
-# QuickNest — Stayflex Owner Portal
+# EzyHotels — Stayflex Owner Portal
 
 ## Project Identity
-**Brand:** QuickNest / Stayflex
+**Brand:** EzyHotels / Stayflex
 **Portal:** Multi-role partner portal (Owner, Admin, Support)
 **Stack:** Vite 5 + React 18 + TypeScript 5 strict
 **Package manager:** npm

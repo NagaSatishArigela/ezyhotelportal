@@ -1,4 +1,4 @@
-# quicknestportal — history & context
+# ezyhotelsportal — history & context
 
 > Handoff doc for developers picking up this repo. Complements `CLAUDE.md`
 > (coding rules / structure). Last updated: 2026-08.
@@ -17,9 +17,9 @@ TypeScript (strict). Runs on **port 3000**, proxies API calls to the backend at
 
 | Repo | Role | Port |
 |------|------|------|
-| quicknestserver | Backend API + DB | 4000 |
-| quicknestweb | Public storefront (guests) | 3001 |
-| **quicknestportal** (this) | Owner / Admin / Support portal | 3000 |
+| ezyhotelsserver | Backend API + DB | 4000 |
+| ezyhotelsweb | Public storefront (guests) | 3001 |
+| **ezyhotelsportal** (this) | Owner / Admin / Support portal | 3000 |
 
 Stack: TanStack Router (file-based, `src/routes`), TanStack Query v5, Zustand v5
 (persist), React Hook Form + Zod, custom shadcn-style UI, Tailwind v4.
@@ -63,7 +63,7 @@ Stack: TanStack Router (file-based, `src/routes`), TanStack Query v5, Zustand v5
 ## How to run
 
 **Prerequisites:** Node 20. The backend must be running for anything data-driven
-(see `quicknestserver/history-context.md` → docker compose + `start:dev`).
+(see `ezyhotelsserver/history-context.md` → docker compose + `start:dev`).
 
 ```bash
 npm install
@@ -95,5 +95,5 @@ npm run e2e        # playwright
 
 ## Related
 
-- Backend + DB setup: `quicknestserver/history-context.md`
-- Storefront: `quicknestweb/history-context.md`
+- Backend + DB setup: `ezyhotelsserver/history-context.md`
+- Storefront: `ezyhotelsweb/history-context.md`
