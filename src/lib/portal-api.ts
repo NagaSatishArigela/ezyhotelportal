@@ -213,23 +213,27 @@ export async function pennyDrop(): Promise<{ success: boolean; amount: number; m
   return { success: true, amount: 1, message: '₹1 credited successfully. Account verified.' }
 }
 
-/**
- * Real file upload — POSTs multipart/form-data to the server's /uploads
- * endpoint and returns the absolute URL the storefront/admin can load.
- * Reuses the shared axios instance (auto-attaches the Bearer token); axios
- * strips the instance's JSON Content-Type for FormData bodies and lets the
- * browser set the multipart boundary.
- */
-export async function uploadFile(file: File): Promise<{ url: string }> {
-  const form = new FormData()
-  form.append('file', file)
-  // The shared axios instance defaults Content-Type to application/json; for a
-  // multipart upload we must clear it so the browser sets the correct
-  // `multipart/form-data; boundary=…` header, otherwise the server 400s.
-  const { data } = await api.post<{ url: string; key: string }>('/uploads', form, {
-    headers: { 'Content-Type': undefined },
+/** Upload a hotel image or verification document directly to S3/R2. */
+export async function uploadFile(
+  file: File,
+  propertyId: string,
+  kind: 'photo' | 'document',
+): Promise<{ url: string; key: string }> {
+  const { data } = await api.post<{ uploadUrl: string; url: string; key: string }>('/uploads/presign', {
+    propertyId,
+    kind,
+    fileName: file.name,
+    contentType: file.type,
+    size: file.size,
   })
-  return { url: data.url }
+
+  const uploadResponse = await fetch(data.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  if (!uploadResponse.ok) throw new Error('Object storage upload failed')
+  return { url: data.url, key: data.key }
 }
 
 /** Pincode lookup — kept as mock until a real pincode provider is configured. */

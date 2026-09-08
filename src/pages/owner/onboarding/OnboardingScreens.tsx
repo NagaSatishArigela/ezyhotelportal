@@ -591,6 +591,7 @@ const photosGateSchema = z
   .refine((photos) => photos.some((p) => p.isPrimary), 'Mark one photo as the cover image.')
 
 export function Step3Policies() {
+  const draftId = useOnboardingStore((s) => s.draftId)
   const stored = useOnboardingStore(
     (s) => s.stepData[3] as { reviewerNotes?: string; photos?: PhotoEntry[] } | undefined,
   )
@@ -630,7 +631,8 @@ export function Step3Policies() {
     try {
       for (const file of accepted) {
         if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} is over 10MB.`); continue }
-        const { url } = await uploadFile(file)
+        if (!draftId) throw new Error('Create the property draft before uploading photos')
+        const { url } = await uploadFile(file, draftId, 'photo')
         setPhotos((prev) => {
           const isFirst = prev.length === 0
           return [
@@ -1178,6 +1180,7 @@ const docsGateSchema = z
   .refine((docs) => docs.some((d) => d.type === 'fire_safety_cert'), 'Upload the fire safety certificate before continuing.')
 
 export function Step5Documents() {
+  const draftId = useOnboardingStore((s) => s.draftId)
   const step1Data = useOnboardingStore((s) => s.stepData[1] as Partial<Step1Data> | undefined)
   const amenities = useOnboardingStore((s) => (s.stepData[2] as { amenities?: string[] } | undefined)?.amenities)
   const entity = step1Data?.businessEntity ?? 'individual'
@@ -1257,7 +1260,8 @@ export function Step5Documents() {
                 required={req}
                 value={urls[id]}
                 onUpload={async (file) => {
-                  const { url } = await uploadFile(file)
+                  if (!draftId) throw new Error('Create the property draft before uploading documents')
+                  const { url } = await uploadFile(file, draftId, 'document')
                   setUrls((prev) => ({ ...prev, [id]: url }))
                   toast.success(`${label} uploaded`)
                 }}
@@ -1484,6 +1488,8 @@ export function Step7ReviewSubmit() {
   const stepData = useOnboardingStore((s) => s.stepData)
   const s1 = stepData[1] as Partial<Step1Data> | undefined
   const s2 = stepData[2] as Partial<Step2Data> | undefined
+  const s3 = stepData[3] as { photos?: Array<{ url?: string }> } | undefined
+  const s5 = stepData[5] as { documents?: Array<{ type?: string; url?: string }> } | undefined
   const s4 = stepData[4] as { rooms?: RoomData[]; smartPricing?: boolean } | undefined
   const s6 = stepData[6] as Partial<Step6Data> | undefined
 
@@ -1509,8 +1515,8 @@ export function Step7ReviewSubmit() {
     },
     {
       step: 3, icon: Camera, label: 'Media & gallery',
-      summary: 'Photos uploaded',
-      ok: true,
+      summary: s3?.photos?.length ? `${s3.photos.length} photo${s3.photos.length > 1 ? 's' : ''} uploaded` : 'Not completed',
+      ok: !!s3?.photos?.some((photo) => photo.url),
     },
     {
       step: 4, icon: IndianRupee, label: 'Rooms & pricing',
@@ -1521,8 +1527,8 @@ export function Step7ReviewSubmit() {
     },
     {
       step: 5, icon: FileText, label: 'Documents & KYC',
-      summary: 'Documents uploaded',
-      ok: true,
+      summary: s5?.documents?.length ? `${s5.documents.length} document${s5.documents.length > 1 ? 's' : ''} uploaded` : 'Not completed',
+      ok: !!s5?.documents?.some((document) => document.url),
     },
     {
       step: 6, icon: CreditCard, label: 'Bank & payouts',
@@ -1537,10 +1543,17 @@ export function Step7ReviewSubmit() {
 
   const handleSubmit = async () => {
     if (!agreed) { toast.error('Please accept the declaration before submitting'); return }
-    const draftId = useOnboardingStore.getState().draftId
+    const currentState = useOnboardingStore.getState()
+    const draftId = currentState.draftId
     if (!draftId) { toast.error('No draft found — please complete the onboarding steps first.'); return }
+    const step5 = completeServerSteps(currentState.stepData).find(({ step }) => step === 5)
+    if (!step5) {
+      toast.error('Step 5 is incomplete. Please upload the required documents and complete the payout details.')
+      return
+    }
     setSubmitting(true)
     try {
+      await saveOnboardingStep(draftId, 5, step5.payload)
       await submitOnboarding(draftId)
       completeStep(7)
       toast.success('Application submitted! Verification takes 24 hours.')
