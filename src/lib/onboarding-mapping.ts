@@ -481,7 +481,7 @@ const SERVER_STEP_REQUIRED: Record<number, string[]> = {
   2: ['latitude', 'longitude', 'addressLine1', 'addressLine2', 'pincode', 'city', 'state'],
   3: [], // custom check below (rooms + amenities + houseRules)
   4: [], // custom check below (>=1 photo)
-  5: ['legalBusinessName', 'pan', 'bankAccountNumber', 'ifsc', 'accountHolderName', 'tcAccepted', 'formCAcknowledged'],
+  5: ['legalBusinessName', 'pan', 'bankAccountNumber', 'ifsc', 'accountHolderName', 'tcAccepted', 'formCAcknowledged', 'documents'],
 }
 
 function present(v: unknown): boolean {

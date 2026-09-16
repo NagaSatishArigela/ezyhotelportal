@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User, Role, OnboardingStatus } from '@/types'
 import { isTokenExpired } from '@/lib/token'
+import { useOnboardingStore } from './onboarding.store'
 
 interface AuthState {
   user: User | null
@@ -64,8 +65,10 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       rememberMe: false,
 
-      setAuth: (user, token, rememberMe = false, refreshToken?) =>
-        set({ user, token, refreshToken: refreshToken ?? null, isAuthenticated: true, rememberMe }),
+      setAuth: (user, token, rememberMe = false, refreshToken?) => {
+        if (user.role === 'owner') useOnboardingStore.getState().bindOwner(user.id, user.propertyId)
+        set({ user, token, refreshToken: refreshToken ?? null, isAuthenticated: true, rememberMe })
+      },
 
       setToken: (token) => set({ token }),
 
