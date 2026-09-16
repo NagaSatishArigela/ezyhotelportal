@@ -4,6 +4,7 @@
  * from the auth store and routes through the Vite proxy → localhost:4000.
  */
 import { api } from './api'
+import { presignError, UploadError } from './upload-error'
 import type { User, Role, OnboardingStatus } from '@/types'
 
 // ── Type helpers ────────────────────────────────────────────────────────────
@@ -225,14 +226,21 @@ export async function uploadFile(
     fileName: file.name,
     contentType: file.type,
     size: file.size,
-  })
+  }).catch((error: unknown) => { throw presignError(error) })
 
+  const validUrl = (value: unknown) => {
+    if (typeof value !== 'string') return false
+    try { return ['http:', 'https:'].includes(new URL(value).protocol) } catch { return false }
+  }
+  if (!validUrl(data?.uploadUrl) || !validUrl(data?.url) || typeof data?.key !== 'string' || !data.key) {
+    throw new UploadError('The upload service returned an invalid upload URL. Please try again or contact support.')
+  }
   const uploadResponse = await fetch(data.uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },
     body: file,
-  })
-  if (!uploadResponse.ok) throw new Error('Object storage upload failed')
+  }).catch(() => { throw new UploadError('Could not send the file to storage. Check your connection; storage access may need administrator attention.') })
+  if (!uploadResponse.ok) throw new UploadError(`Storage rejected the upload (HTTP ${uploadResponse.status}). Please try again or contact support.`)
   return { url: data.url, key: data.key }
 }
 

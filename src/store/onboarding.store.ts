@@ -4,6 +4,8 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface OnboardingState {
+  ownerId: string | null
+  bindOwner: (ownerId: string, propertyId?: string) => void
   currentStep: number
   completedSteps: number[]
   draftId: string | null
@@ -32,6 +34,7 @@ interface OnboardingState {
 }
 
 const initialState = {
+  ownerId: null,
   currentStep: 1,
   completedSteps: [],
   draftId: null,
@@ -45,6 +48,14 @@ export const useOnboardingStore = create<OnboardingState>()(
     (set) => ({
       ...initialState,
       onBeforeNext: null,
+      bindOwner: (ownerId, propertyId) => set((state) => {
+        const sameOwner = state.ownerId === ownerId
+        const matchingProperty = !!propertyId && state.draftId === propertyId
+        // Legacy drafts can only be retained when the server confirms their property.
+        if ((sameOwner || state.ownerId === null) && matchingProperty) return { ownerId }
+        if (sameOwner && !propertyId && !state.draftId) return { ownerId }
+        return { ...initialState, ownerId, draftId: propertyId ?? null, onBeforeNext: null }
+      }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       completeStep: (step) =>
@@ -66,6 +77,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       storage: createJSONStorage(() => localStorage),
       // onBeforeNext is a function — not serialisable, must not be persisted
       partialize: (state) => ({
+        ownerId: state.ownerId,
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
         draftId: state.draftId,
