@@ -30,6 +30,8 @@ export function useAutoSave({ step, saveFn, debounceMs = 1500 }: UseAutoSaveOpti
   const triggerSave = useCallback(
     (data: Record<string, unknown>) => {
       lastDataRef.current = data
+      // Keep the local draft current even if Back or reload cancels the debounce.
+      saveStepData(step, data)
       if (timerRef.current) clearTimeout(timerRef.current)
 
       timerRef.current = setTimeout(async () => {

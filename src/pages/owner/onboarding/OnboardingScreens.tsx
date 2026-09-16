@@ -16,6 +16,9 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { FieldWrapper } from '@/components/shared/FieldWrapper'
 import { DocumentUploader } from '@/components/shared/DocumentUploader'
+import { FilePreview } from '@/components/shared/FilePreview'
+import { PHOTO_ACCEPT, validateUpload } from '@/lib/upload-validation'
+import { uploadErrorMessage } from '@/lib/upload-error'
 import { PhotoTile } from '@/components/shared/PhotoTile'
 import { cn, formatINR } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/onboarding.store'
@@ -598,8 +601,14 @@ export function Step3Policies() {
   const [photos, setPhotos] = useState<PhotoEntry[]>(stored?.photos ?? [])
   const [reviewerNotes, setReviewerNotes] = useState(stored?.reviewerNotes ?? '')
   const [busy, setBusy] = useState<PhotoCategory | null>(null)
+  const uploadBusy = useRef(false)
+  const localPhotos = useRef<Record<string, string>>({})
+  const replacementInput = useRef<HTMLInputElement>(null)
+  const replacement = useRef<PhotoEntry | null>(null)
+  useEffect(() => () => { Object.values(localPhotos.current).forEach(URL.revokeObjectURL) }, [])
 
   const validate = useCallback(async () => {
+    if (uploadBusy.current) { toast.error('Wait for the photo upload to finish.'); return false }
     const result = photosGateSchema.safeParse(photos)
     if (!result.success) {
       toast.error(result.error.issues[0]?.message ?? 'Add photos before continuing.')
@@ -615,7 +624,7 @@ export function Step3Policies() {
   }, [reviewerNotes, JSON.stringify(photos)])
 
   const addFiles = async (category: PhotoCategory, files: FileList | null) => {
-    if (!files || files.length === 0) return
+    if (!files || files.length === 0 || uploadBusy.current) return
     const list = Array.from(files)
     const inCategory = photos.filter((p) => p.category === category).length
     const total = photos.length
@@ -627,18 +636,24 @@ export function Step3Policies() {
     const accepted = list.slice(0, room)
     if (accepted.length < list.length) toast.info(`Only ${accepted.length} photo(s) added — category/total limit reached.`)
 
+    uploadBusy.current = true
     setBusy(category)
+    let uploadedCount = 0
     try {
       for (const file of accepted) {
-        if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} is over 10MB.`); continue }
+        const issue = validateUpload(file, PHOTO_ACCEPT)
+        if (issue) { toast.error(`${file.name}: ${issue}`); continue }
         if (!draftId) throw new Error('Create the property draft before uploading photos')
         const { url } = await uploadFile(file, draftId, 'photo')
+        const photoId = crypto.randomUUID()
+        localPhotos.current[photoId] = URL.createObjectURL(file)
+        uploadedCount++
         setPhotos((prev) => {
           const isFirst = prev.length === 0
           return [
             ...prev,
             {
-              id: crypto.randomUUID(),
+              id: photoId,
               category,
               url,
               sortOrder: prev.length,
@@ -647,15 +662,19 @@ export function Step3Policies() {
           ]
         })
       }
-      toast.success('Photo uploaded')
-    } catch {
-      toast.error('Upload failed. Please try again.')
+      if (uploadedCount) toast.success(`${uploadedCount} photo(s) uploaded`)
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
+      uploadBusy.current = false
       setBusy(null)
     }
   }
 
   const removePhoto = (id: string) => {
+    if (uploadBusy.current) return
+    if (localPhotos.current[id]) URL.revokeObjectURL(localPhotos.current[id])
+    delete localPhotos.current[id]
     setPhotos((prev) => {
       const next = prev.filter((p) => p.id !== id).map((p, i) => ({ ...p, sortOrder: i }))
       // Ensure a cover still exists if any photos remain.
@@ -668,9 +687,29 @@ export function Step3Policies() {
     setPhotos((prev) => prev.map((p) => ({ ...p, isPrimary: p.id === id })))
   }
 
+  const replacePhoto = async (file: File) => {
+    const photo = replacement.current
+    if (!photo || uploadBusy.current) return
+    const issue = validateUpload(file, PHOTO_ACCEPT)
+    if (issue) { toast.error(issue); return }
+    uploadBusy.current = true
+    setBusy(photo.category)
+    try {
+      if (!draftId) throw new Error('Missing property draft')
+      const { url } = await uploadFile(file, draftId, 'photo')
+      if (localPhotos.current[photo.id]) URL.revokeObjectURL(localPhotos.current[photo.id])
+      localPhotos.current[photo.id] = URL.createObjectURL(file)
+      setPhotos((prev) => prev.map((entry) => entry.id === photo.id ? { ...entry, url } : entry))
+      toast.success('Photo replaced')
+    } catch (error) { toast.error(`${uploadErrorMessage(error)} Your previous photo has been kept.`) }
+    finally { uploadBusy.current = false; setBusy(null) }
+  }
+
   return (
     <div className="space-y-6">
       <StepHeader step={3} title="Media & gallery" subtitle="High-quality photos increase bookings by 40%. Add at least one photo and mark a cover." />
+      <input ref={replacementInput} type="file" accept={PHOTO_ACCEPT} className="sr-only" aria-label="Replacement photo" disabled={busy !== null}
+        onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void replacePhoto(file) }} />
       <TwoCol side={
         <SideNote icon={Camera} title="Photo quality rules" body="Use landscape orientation, natural daylight, no watermarks, no text overlays, no misleading crops. Minimum 1200px wide." />
       }>
@@ -699,7 +738,9 @@ export function Step3Policies() {
                     Add
                     <input
                       type="file"
-                      accept=".jpg,.jpeg,.png,.webp"
+                      accept={PHOTO_ACCEPT}
+                      disabled={busy !== null}
+                      aria-label={`Add ${label} photos`}
                       multiple
                       className="sr-only"
                       onChange={(e) => { addFiles(id, e.target.files); e.target.value = '' }}
@@ -711,13 +752,17 @@ export function Step3Policies() {
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
                     {catPhotos.map((p) => (
                       <div key={p.id} className="relative group aspect-[4/3] overflow-hidden rounded-[8px] border border-border">
-                        <PhotoTile src={p.url} alt={label} className="w-full h-full" />
+                        <button type="button" className="w-full h-full" disabled={busy !== null} aria-label={`Replace ${label} photo`}
+                          onClick={() => { replacement.current = p; replacementInput.current?.click() }}>
+                          <PhotoTile src={localPhotos.current[p.id] || p.url} alt={label} className="w-full h-full" />
+                        </button>
                         {p.isPrimary && (
                           <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-[6px] bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                             <Star size={9} className="fill-white" /> Cover
                           </span>
                         )}
-                        <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1 bg-white/90">
+                          <FilePreview src={localPhotos.current[p.id] || p.url} name={`${label} photo`} />
                           {!p.isPrimary && (
                             <button
                               type="button"
@@ -732,6 +777,7 @@ export function Step3Policies() {
                             onClick={() => removePhoto(p.id)}
                             className="ml-auto rounded-[6px] bg-error-500/90 p-1 text-white hover:bg-error-500"
                             aria-label="Remove photo"
+                            disabled={busy !== null}
                           >
                             <X size={11} />
                           </button>
@@ -1191,6 +1237,7 @@ export function Step5Documents() {
   // docId → uploaded url. Restored from persisted stepData on reload.
   const stored = useOnboardingStore((s) => s.stepData[5] as { docUrls?: Record<string, string> } | undefined)
   const [urls, setUrls] = useState<Record<string, string>>(stored?.docUrls ?? {})
+  const pendingUploads = useRef(new Set<string>())
 
   const ALL_DOCS: DocDef[] = [
     { id: 'pan',       type: 'pan_card',                  label: 'PAN card',                   required: true,      show: true },
@@ -1212,6 +1259,7 @@ export function Step5Documents() {
   const documents: DocValue[] = DOCS.filter((d) => urls[d.id]).map((d) => ({ type: d.type, url: urls[d.id] }))
 
   const validate = useCallback(async () => {
+    if (pendingUploads.current.size) { toast.error('Wait for document uploads to finish.'); return false }
     const result = docsGateSchema.safeParse(documents)
     if (!result.success) {
       toast.error(result.error.issues[0]?.message ?? 'Upload the required documents.')
@@ -1254,11 +1302,13 @@ export function Step5Documents() {
           {DOCS.map(({ id, label, required: req }) => (
             <div key={id} className="space-y-1">
               <DocumentUploader
-                label={label + (req ? ' *' : '')}
+                label={label}
                 accept=".pdf,.jpg,.jpeg,.png"
                 maxSizeMB={10}
                 required={req}
                 value={urls[id]}
+                onBusyChange={(pending) => { if (pending) pendingUploads.current.add(id); else pendingUploads.current.delete(id) }}
+                onRemove={() => setUrls((prev) => { const next = { ...prev }; delete next[id]; return next })}
                 onUpload={async (file) => {
                   if (!draftId) throw new Error('Create the property draft before uploading documents')
                   const { url } = await uploadFile(file, draftId, 'document')

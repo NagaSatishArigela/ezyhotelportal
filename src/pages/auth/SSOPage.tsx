@@ -74,10 +74,9 @@ export function SSOPage() {
         avatarInitials: initials,
       }
 
-      setAuth(user, tokens.accessToken, false, tokens.refreshToken)
-
       // Fresh onboarding — reset any previous draft then pre-fill Step 1
       reset()
+      setAuth(user, tokens.accessToken, false, tokens.refreshToken)
       saveStepData(1, { phone: ph, email: em })
 
       toast.success("Account created! Let's set up your property.")

@@ -10,7 +10,7 @@ export const api = axios.create({
 // Attach JWT + request ID on every outgoing request
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token && !config.headers.Authorization) config.headers.Authorization = `Bearer ${token}`
   // Propagate request ID for backend log correlation (E16)
   config.headers['X-Request-ID'] = crypto.randomUUID()
   return config

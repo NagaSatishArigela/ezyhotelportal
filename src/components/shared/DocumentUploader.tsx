@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Upload, CheckCircle, AlertCircle, X, FileText } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Progress } from '@/components/ui/progress'
-
-type UploadState = 'idle' | 'uploading' | 'success' | 'error'
+import { useEffect, useRef, useState } from 'react'
+import { Upload, FileText } from 'lucide-react'
+import { FilePreview } from './FilePreview'
+import { uploadErrorMessage } from '@/lib/upload-error'
+import { DOCUMENT_ACCEPT, uploadFilename, validateUpload } from '@/lib/upload-validation'
 
 interface DocumentUploaderProps {
   label: string
@@ -13,164 +12,63 @@ interface DocumentUploaderProps {
   accept?: string
   maxSizeMB?: number
   onUpload: (file: File) => Promise<void>
+  onRemove?: () => void
+  onBusyChange?: (busy: boolean) => void
   value?: string
 }
 
-export function DocumentUploader({
-  label,
-  hint,
-  why,
-  required = true,
-  accept = '.jpg,.jpeg,.png,.pdf',
-  maxSizeMB = 10,
-  onUpload,
-  value,
-}: DocumentUploaderProps) {
-  const inputRef    = useRef<HTMLInputElement>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const mountedRef  = useRef(true)
+export function DocumentUploader({ label, hint, why, required = true, accept = DOCUMENT_ACCEPT, maxSizeMB = 10, onUpload, onRemove, onBusyChange, value }: DocumentUploaderProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const busyRef = useRef(false)
+  const mounted = useRef(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [local, setLocal] = useState<{ src: string; name: string; isPdf: boolean } | null>(null)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  useEffect(() => () => { if (local) URL.revokeObjectURL(local.src) }, [local])
+  useEffect(() => { if (!value && !busyRef.current) setLocal(null) }, [value])
 
-  const [state,    setState]    = useState<UploadState>(value ? 'success' : 'idle')
-  const [progress, setProgress] = useState(0)
-  const [filename, setFilename] = useState(value ?? '')
-  const [error,    setError]    = useState('')
-  const [dragging, setDragging] = useState(false)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [])
-
-  const handleFile = useCallback(async (file: File) => {
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      setError(`File too large. Max ${maxSizeMB}MB.`)
-      setState('error')
-      return
-    }
+  const handleFile = async (file: File) => {
+    if (busyRef.current) return
+    const issue = validateUpload(file, accept, maxSizeMB)
+    if (issue) { setError(issue); return }
+    busyRef.current = true
+    setBusy(true)
+    onBusyChange?.(true)
     setError('')
-    setFilename(file.name)
-    setState('uploading')
-    setProgress(0)
-
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    intervalRef.current = setInterval(() => {
-      if (mountedRef.current) setProgress((p) => Math.min(p + 20, 90))
-    }, 200)
-
     try {
       await onUpload(file)
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      if (mountedRef.current) {
-        setProgress(100)
-        setState('success')
-      }
-    } catch {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      if (mountedRef.current) {
-        setError('Upload failed. Please try again.')
-        setState('error')
-      }
+      if (mounted.current) setLocal({ src: URL.createObjectURL(file), name: file.name, isPdf: file.name.toLowerCase().endsWith('.pdf') })
+    } catch (error) {
+      if (mounted.current) setError(`${uploadErrorMessage(error)}${value ? ' Your previous file has been kept.' : ''}`)
+    } finally {
+      busyRef.current = false
+      onBusyChange?.(false)
+      if (mounted.current) setBusy(false)
     }
-  }, [maxSizeMB, onUpload])
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
   }
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label className="text-[12.5px] font-semibold text-navy-900">
-          {label}
-          {required && <span className="text-error-500 ml-0.5">*</span>}
-        </label>
-        {why && (
-          <span className="text-xs text-primary-600 cursor-help underline decoration-dashed" title={why}>
-            Why we need this
-          </span>
-        )}
-      </div>
-
-      {hint && <p className="text-xs text-navy-400">{hint}</p>}
-
-      <div
-        role="button"
-        tabIndex={0}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
-        className={cn(
-          'relative flex flex-col items-center justify-center gap-2 rounded-(--radius-md) border-2 border-dashed p-6 transition-all cursor-pointer',
-          dragging && 'border-primary-600 bg-primary-50',
-          state === 'idle'      && !dragging && 'border-navy-200 hover:border-primary-400 hover:bg-navy-50',
-          state === 'uploading' && 'border-primary-300 bg-primary-50 pointer-events-none',
-          state === 'success'   && 'border-success-500 bg-success-50',
-          state === 'error'     && 'border-error-500 bg-error-50',
-        )}
-      >
-        {state === 'idle' && (
-          <>
-            <Upload className="text-navy-400" size={24} aria-hidden />
-            <div className="text-center">
-              <p className="text-sm font-medium text-navy-700">Click or drag to upload</p>
-              <p className="text-xs text-navy-400 mt-0.5">{accept.replace(/\./g, '').toUpperCase()} · Max {maxSizeMB}MB</p>
-            </div>
-          </>
-        )}
-
-        {state === 'uploading' && (
-          <div className="w-full space-y-2">
-            <div className="flex items-center gap-2">
-              <FileText size={16} className="text-primary-600 shrink-0" aria-hidden />
-              <p className="text-sm text-navy-700 truncate flex-1">{filename}</p>
-            </div>
-            <Progress value={progress} />
-            <p className="text-xs text-navy-400 text-center">Uploading… {progress}%</p>
-          </div>
-        )}
-
-        {state === 'success' && (
-          <div className="flex items-center gap-2 w-full">
-            <CheckCircle size={18} className="text-success-500 shrink-0" aria-hidden />
-            <p className="text-sm font-medium text-success-700 truncate flex-1">{filename}</p>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setState('idle'); setFilename('') }}
-              className="text-navy-400 hover:text-navy-600 ml-auto shrink-0"
-              aria-label="Remove file"
-            >
-              <X size={14} aria-hidden />
-            </button>
-          </div>
-        )}
-
-        {state === 'error' && (
-          <div className="flex items-center gap-2 w-full">
-            <AlertCircle size={18} className="text-error-500 shrink-0" aria-hidden />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-error-700">{error || 'Upload failed'}</p>
-              <p className="text-xs text-error-500 mt-0.5">Click to try again</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="sr-only"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-        aria-label={label}
-      />
-    </div>
-  )
+  const src = local?.src || value
+  const name = local?.name || (value ? uploadFilename(value) : '')
+  const isPdf = local?.isPdf ?? /\.pdf(?:[?#]|$)/i.test(value || '')
+  return <div className="space-y-1.5">
+    <p className="text-[12.5px] font-semibold text-navy-900">{label}{required && <span className="text-error-500 ml-0.5">*</span>}</p>
+    {hint && <p className="text-xs text-navy-400">{hint}</p>}
+    {why && <p className="text-xs text-primary-600" title={why}>Why we need this</p>}
+    <button type="button" disabled={busy} aria-label={`${src ? 'Replace' : 'Upload'} ${label}`}
+      className="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-navy-200 p-6 hover:border-primary-400 disabled:opacity-60"
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) void handleFile(file) }}>
+      {src && !isPdf ? <img src={src} alt={name} className="h-24 w-full object-contain" /> : src ? <FileText size={24} /> : <Upload size={24} />}
+      <span className="max-w-full truncate text-sm">{busy ? 'Uploading...' : name || 'Click or drag to upload'}</span>
+      <span className="text-xs text-navy-400">{src ? 'Click to replace file' : `${accept} - Max ${maxSizeMB}MB`}</span>
+    </button>
+    {src && <div className="flex items-center justify-between">
+      <FilePreview src={src} name={name} isPdf={isPdf} />
+      {onRemove && <button type="button" disabled={busy} aria-label={`Remove ${label}`} className="text-xs text-error-500" onClick={() => { onRemove(); setLocal(null); setError('') }}>Remove</button>}
+    </div>}
+    {error && <p role="alert" className="text-xs text-error-500">{error}</p>}
+    <input ref={inputRef} type="file" accept={accept} disabled={busy} className="sr-only" aria-label={label}
+      onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void handleFile(file) }} />
+  </div>
 }
