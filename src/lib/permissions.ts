@@ -1,6 +1,10 @@
 import type { Role, Permission } from '@/types'
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
+  applicant: ['view_onboarding', 'submit_onboarding', 'view_approval_status'],
+  hotel_admin: [],
+  manager: [],
+  staff: [],
   owner: [
     'view_onboarding',
     'submit_onboarding',
@@ -50,7 +54,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 }
 
 export function hasPermission(role: Role, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false
+  return role === 'super_admin' || (ROLE_PERMISSIONS[role]?.includes(permission) ?? false)
 }
 
 /** Features that require "approved" status even if the role has the permission */

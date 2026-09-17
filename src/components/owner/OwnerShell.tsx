@@ -1,7 +1,20 @@
+import { HotelAccessSync } from './HotelAccessSync'
+import { canAccessHotelRoute } from '@/lib/hotel-access'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
-  LayoutDashboard, CalendarDays, BookOpen, BarChart2,
-  Wallet, Star, Settings, BedDouble, Gavel, Menu, Bell, LogOut, Lock,
+  LayoutDashboard,
+  CalendarDays,
+  BookOpen,
+  BarChart2,
+  Wallet,
+  Star,
+  Settings,
+  BedDouble,
+  Gavel,
+  Menu,
+  Bell,
+  LogOut,
+  Lock,
 } from 'lucide-react'
 import { EzyMark, EzyWordmark } from '@/components/brand/EzyLogo'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -10,21 +23,29 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUIStore } from '@/store/ui.store'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { AutoSaveIndicator } from '@/components/shared/AutoSaveIndicator'
 import { ownerNotificationsApi } from '@/lib/api/ownerNotifications'
 
 const NAV_ITEMS = [
-  { href: '/owner/dashboard', label: 'Dashboard',      icon: LayoutDashboard, needsApproval: true },
-  { href: '/owner/bookings',  label: 'Bookings',       icon: BookOpen,        needsApproval: true },
-  { href: '/owner/availability', label: 'Availability', icon: CalendarDays,   needsApproval: true },
-  { href: '/owner/rooms',     label: 'Rooms & Pricing', icon: BedDouble,      needsApproval: true },
-  { href: '/owner/analytics', label: 'Analytics',      icon: BarChart2,       needsApproval: true },
-  { href: '/owner/reviews',   label: 'Reviews',        icon: Star,            needsApproval: true },
-  { href: '/owner/disputes',  label: 'Disputes',       icon: Gavel,           needsApproval: true },
-  { href: '/owner/payouts',   label: 'Payouts',        icon: Wallet,          needsApproval: true },
-  { href: '/owner/notifications', label: 'Notifications', icon: Bell,         needsApproval: true },
-  { href: '/owner/settings',  label: 'Settings',       icon: Settings,        needsApproval: true },
+  { href: '/owner/access', label: 'Your hotels', icon: BedDouble, needsApproval: false },
+  { href: '/owner/team', label: 'Team & roles', icon: Settings, needsApproval: true },
+  { href: '/owner/dashboard', label: 'Dashboard', icon: LayoutDashboard, needsApproval: true },
+  { href: '/owner/bookings', label: 'Bookings', icon: BookOpen, needsApproval: true },
+  { href: '/owner/availability', label: 'Availability', icon: CalendarDays, needsApproval: true },
+  { href: '/owner/rooms', label: 'Rooms & Pricing', icon: BedDouble, needsApproval: true },
+  { href: '/owner/analytics', label: 'Analytics', icon: BarChart2, needsApproval: true },
+  { href: '/owner/reviews', label: 'Reviews', icon: Star, needsApproval: true },
+  { href: '/owner/disputes', label: 'Disputes', icon: Gavel, needsApproval: true },
+  { href: '/owner/payouts', label: 'Payouts', icon: Wallet, needsApproval: true },
+  { href: '/owner/notifications', label: 'Notifications', icon: Bell, needsApproval: true },
+  { href: '/owner/settings', label: 'Settings', icon: Settings, needsApproval: true },
 ]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
@@ -39,13 +60,13 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     queryKey: ['owner-notifications-count'],
     queryFn: ownerNotificationsApi.unreadCount,
     refetchInterval: 60_000,
-    enabled: isApproved,
+    enabled: isApproved && user?.role === 'owner',
   })
 
   const { data: recentData } = useQuery({
     queryKey: ['owner-notifications-bell'],
     queryFn: () => ownerNotificationsApi.list(1, 10),
-    enabled: isApproved,
+    enabled: isApproved && user?.role === 'owner',
     refetchInterval: 60_000,
   })
 
@@ -62,19 +83,24 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={200}>
+      <HotelAccessSync />
       <div className="flex h-screen overflow-hidden bg-navy-50">
         {/* Sidebar */}
-        <aside className={cn(
-          'hidden md:flex flex-col bg-white border-r border-border transition-all duration-200 shrink-0',
-          collapsed ? 'w-16' : 'w-[232px]'
-        )}>
+        <aside
+          className={cn(
+            'hidden md:flex flex-col bg-white border-r border-border transition-all duration-200 shrink-0',
+            collapsed ? 'w-16' : 'w-[232px]'
+          )}
+        >
           {/* Logo */}
           <div className="flex h-16 items-center gap-2 px-4 border-b border-border">
             <EzyMark size={30} className="shrink-0" />
             {!collapsed && (
               <div>
                 <EzyWordmark className="font-display font-bold text-[15px] leading-none" />
-                <p className="text-[10px] text-navy-400 uppercase tracking-wider mt-0.5">Owner portal</p>
+                <p className="text-[10px] text-navy-400 uppercase tracking-wider mt-0.5">
+                  Hotel portal
+                </p>
               </div>
             )}
           </div>
@@ -82,15 +108,17 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto thin-scroll py-3 space-y-0.5 px-2">
             {NAV_ITEMS.map(({ href, label, icon: Icon, needsApproval }) => {
-              const locked = needsApproval && !isApproved
+              const locked = needsApproval && !canAccessHotelRoute(user, href)
               const active = pathname === href || pathname.startsWith(href + '/')
 
               const item = (
                 <div>
                   {locked ? (
-                    <div className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm cursor-not-allowed opacity-50',
-                    )}>
+                    <div
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm cursor-not-allowed opacity-50'
+                      )}
+                    >
                       <Icon size={18} className="shrink-0 text-navy-400" aria-hidden />
                       {!collapsed && <span className="flex-1 text-navy-400">{label}</span>}
                       {!collapsed && <Lock size={12} className="text-navy-300" aria-hidden />}
@@ -102,7 +130,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
                         'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                         active
                           ? 'bg-primary-50 text-primary-600 border-l-[3px] border-primary-600 pl-[9px]'
-                          : 'text-navy-600 hover:bg-navy-50 hover:text-navy-900',
+                          : 'text-navy-600 hover:bg-navy-50 hover:text-navy-900'
                       )}
                     >
                       <Icon size={18} className="shrink-0" aria-hidden />
@@ -119,7 +147,8 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
                       <div>{item}</div>
                     </TooltipTrigger>
                     <TooltipContent side="right">
-                      {label}{locked ? ' (Pending approval)' : ''}
+                      {label}
+                      {locked ? ' (Pending approval)' : ''}
                     </TooltipContent>
                   </Tooltip>
                 )
@@ -156,7 +185,9 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <button
                     className="relative text-navy-400 hover:text-navy-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded"
-                    aria-label={unreadCount > 0 ? `Notifications — ${unreadCount} unread` : 'Notifications'}
+                    aria-label={
+                      unreadCount > 0 ? `Notifications — ${unreadCount} unread` : 'Notifications'
+                    }
                     data-testid="bell-btn"
                   >
                     <Bell size={20} aria-hidden />
@@ -180,14 +211,16 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
                   </div>
                   <div className="max-h-80 overflow-y-auto" data-testid="bell-dropdown">
                     {!recentData || recentData.items.length === 0 ? (
-                      <div className="py-8 text-center text-sm text-navy-400">No notifications yet</div>
+                      <div className="py-8 text-center text-sm text-navy-400">
+                        No notifications yet
+                      </div>
                     ) : (
                       recentData.items.map((n) => (
                         <button
                           key={n.id}
                           className={cn(
                             'flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-navy-50 border-b border-border last:border-0',
-                            !n.isRead && 'bg-primary-50/40',
+                            !n.isRead && 'bg-primary-50/40'
                           )}
                           onClick={() => {
                             if (!n.isRead) markRead.mutate(n.id)
@@ -196,11 +229,18 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
                           data-testid="bell-notification-item"
                         >
                           {!n.isRead && (
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary-600" aria-hidden />
+                            <span
+                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary-600"
+                              aria-hidden
+                            />
                           )}
                           {n.isRead && <span className="mt-1.5 h-2 w-2 shrink-0" aria-hidden />}
                           <div className="min-w-0">
-                            <p className={cn('text-sm text-navy-900', !n.isRead && 'font-semibold')}>{n.title}</p>
+                            <p
+                              className={cn('text-sm text-navy-900', !n.isRead && 'font-semibold')}
+                            >
+                              {n.title}
+                            </p>
                             <p className="mt-0.5 truncate text-xs text-navy-500">{n.body}</p>
                           </div>
                         </button>
@@ -236,7 +276,10 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => { logout(); navigate({ to: '/login' }) }}
+                    onClick={() => {
+                      logout()
+                      navigate({ to: '/login' })
+                    }}
                     className="text-error-500 hover:text-error-700"
                   >
                     <LogOut size={14} aria-hidden />
@@ -247,12 +290,18 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <nav className="md:hidden flex gap-2 overflow-x-auto border-b border-border bg-white px-4 py-2" aria-label="Owner mobile navigation">
+          <nav
+            className="md:hidden flex gap-2 overflow-x-auto border-b border-border bg-white px-4 py-2"
+            aria-label="Owner mobile navigation"
+          >
             {NAV_ITEMS.map(({ href, label, needsApproval }) => {
-              const locked = needsApproval && !isApproved
+              const locked = needsApproval && !canAccessHotelRoute(user, href)
               const active = pathname === href || pathname.startsWith(href + '/')
               return locked ? (
-                <span key={href} className="whitespace-nowrap rounded-[10px] px-3 py-2 text-sm font-semibold text-navy-300">
+                <span
+                  key={href}
+                  className="whitespace-nowrap rounded-[10px] px-3 py-2 text-sm font-semibold text-navy-300"
+                >
                   {label}
                 </span>
               ) : (
@@ -271,9 +320,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto thin-scroll p-6">
-            {children}
-          </main>
+          <main className="flex-1 overflow-y-auto thin-scroll p-6">{children}</main>
         </div>
       </div>
     </TooltipProvider>

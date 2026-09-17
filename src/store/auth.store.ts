@@ -12,11 +12,12 @@ interface AuthState {
   rememberMe: boolean
 
   setAuth: (user: User, token: string, rememberMe?: boolean, refreshToken?: string) => void
+  setUser: (user: User) => void
   setToken: (token: string) => void
   setRefreshToken: (refreshToken: string) => void
   updateOnboardingStatus: (status: OnboardingStatus, step?: number) => void
   logout: () => void
-  checkTokenExpiry: () => boolean  // returns true if still valid
+  checkTokenExpiry: () => boolean // returns true if still valid
 }
 
 // Custom StateStorage: writes to both sessionStorage (always) and localStorage
@@ -30,7 +31,9 @@ const authStateStorage = {
   setItem: (name: string, value: string): void => {
     if (typeof window === 'undefined') return
     try {
-      const parsed = JSON.parse(value) as { state?: { rememberMe?: boolean; token?: unknown; refreshToken?: unknown } }
+      const parsed = JSON.parse(value) as {
+        state?: { rememberMe?: boolean; token?: unknown; refreshToken?: unknown }
+      }
       // Strip BOTH tokens before any persistence — tokens are memory-only.
       // sessionStorage is accessible to JS so an XSS payload could steal tokens
       // from it. By keeping tokens exclusively in the Zustand in-memory store
@@ -66,10 +69,12 @@ export const useAuthStore = create<AuthState>()(
       rememberMe: false,
 
       setAuth: (user, token, rememberMe = false, refreshToken?) => {
-        if (user.role === 'owner') useOnboardingStore.getState().bindOwner(user.id, user.propertyId)
+        if (user.role === 'owner' || user.role === 'applicant')
+          useOnboardingStore.getState().bindOwner(user.id, user.propertyId)
         set({ user, token, refreshToken: refreshToken ?? null, isAuthenticated: true, rememberMe })
       },
 
+      setUser: (user) => set({ user }),
       setToken: (token) => set({ token }),
 
       setRefreshToken: (refreshToken) => set({ refreshToken }),
@@ -81,13 +86,23 @@ export const useAuthStore = create<AuthState>()(
             : null,
         })),
 
-      logout: () => set({ user: null, token: null, refreshToken: null, isAuthenticated: false, rememberMe: false }),
+      logout: () =>
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          rememberMe: false,
+        }),
 
       checkTokenExpiry: () => {
         const { token, logout } = get()
         if (!token) return false
         // isTokenExpired uses seconds-based JWT exp (not milliseconds like mock tokens)
-        if (isTokenExpired(token)) { logout(); return false }
+        if (isTokenExpired(token)) {
+          logout()
+          return false
+        }
         return true
       },
     }),
@@ -116,5 +131,4 @@ export const selectRole = (s: AuthState): Role | null => s.user?.role ?? null
 export const selectIsAuthenticated = (s: AuthState) => s.isAuthenticated
 export const selectOnboardingStatus = (s: AuthState): OnboardingStatus =>
   s.user?.onboardingStatus ?? 'not_started'
-export const selectIsApproved = (s: AuthState) =>
-  s.user?.onboardingStatus === 'approved'
+export const selectIsApproved = (s: AuthState) => s.user?.onboardingStatus === 'approved'

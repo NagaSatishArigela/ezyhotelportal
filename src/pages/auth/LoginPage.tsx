@@ -1,3 +1,5 @@
+import { useOnboardingStore } from '@/store/onboarding.store'
+import { queryClient } from '@/lib/queryClient'
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
@@ -14,65 +16,89 @@ import { FieldWrapper } from '@/components/shared/FieldWrapper'
 import { cn } from '@/lib/utils'
 
 const loginSchema = z.object({
-  email:      z.string().email('Enter a valid email address'),
-  password:   z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   rememberMe: z.boolean().optional(),
 })
 type LoginForm = z.infer<typeof loginSchema>
 
 const DEMO_ACCOUNTS = [
-  { label: 'Owner — Onboarding', email: 'owner@demo.com',       colorCls: 'bg-primary-50 text-primary-700 hover:bg-primary-100' },
-  { label: 'Owner — Approved',   email: 'approved@demo.com',    colorCls: 'bg-success-50 text-success-700 hover:bg-success-50' },
-  { label: 'Admin',              email: 'admin@demo.com',       colorCls: 'bg-navy-100 text-navy-700 hover:bg-navy-200' },
-  { label: 'Support',            email: 'support@demo.com',     colorCls: 'bg-teal-50 text-teal-700 hover:bg-teal-100' },
-  { label: 'Super Admin',        email: 'superadmin@demo.com',  colorCls: 'bg-navy-800 text-white hover:bg-navy-700' },
+  {
+    label: 'Owner — Onboarding',
+    email: 'owner@demo.com',
+    colorCls: 'bg-primary-50 text-primary-700 hover:bg-primary-100',
+  },
+  {
+    label: 'Owner — Approved',
+    email: 'approved@demo.com',
+    colorCls: 'bg-success-50 text-success-700 hover:bg-success-50',
+  },
+  {
+    label: 'Admin',
+    email: 'admin@demo.com',
+    colorCls: 'bg-navy-100 text-navy-700 hover:bg-navy-200',
+  },
+  {
+    label: 'Support',
+    email: 'support@demo.com',
+    colorCls: 'bg-teal-50 text-teal-700 hover:bg-teal-100',
+  },
+  {
+    label: 'Super Admin',
+    email: 'superadmin@demo.com',
+    colorCls: 'bg-navy-800 text-white hover:bg-navy-700',
+  },
 ]
 
 const BRAND_FEATURES = [
-  { icon: TrendingUp,    text: 'Real-time bookings & revenue dashboard' },
-  { icon: IndianRupee,   text: 'Fast D+1 settlements with TDS tracking' },
-  { icon: Clock,         text: 'Hourly & overnight pricing in one place' },
-  { icon: Shield,        text: 'RBI-compliant KYC & secure payouts' },
+  { icon: TrendingUp, text: 'Real-time bookings & revenue dashboard' },
+  { icon: IndianRupee, text: 'Fast D+1 settlements with TDS tracking' },
+  { icon: Clock, text: 'Hourly & overnight pricing in one place' },
+  { icon: Shield, text: 'RBI-compliant KYC & secure payouts' },
 ]
 
 export function LoginPage() {
-  const navigate   = useNavigate()
-  const setAuth    = useAuthStore((s) => s.setAuth)
+  const navigate = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
   const [showPwd, setShowPwd] = useState(false)
   const [shaking, setShaking] = useState(false)
   const [apiError, setApiError] = useState(false)
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
-    useForm<LoginForm>({
-      resolver: zodResolver(loginSchema),
-      defaultValues: { rememberMe: false },
-    })
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { rememberMe: false },
+  })
 
   // Single shake trigger — fires on validation errors OR API errors
   useEffect(() => {
     const hasError = Object.keys(errors).length > 0 || apiError
     if (!hasError) return
     setShaking(true)
-    const t = setTimeout(() => { setShaking(false); setApiError(false) }, 500)
+    const t = setTimeout(() => {
+      setShaking(false)
+      setApiError(false)
+    }, 500)
     return () => clearTimeout(t)
   }, [errors, apiError])
 
   const onSubmit = async ({ email, password, rememberMe }: LoginForm) => {
     try {
       const { user, token, refreshToken } = await portalLogin(email, password)
+      if (useAuthStore.getState().user?.id !== user.id) useOnboardingStore.getState().reset()
+      queryClient.clear()
       setAuth(user, token, rememberMe, refreshToken)
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`)
 
       if (user.role === 'super_admin') return navigate({ to: '/super-admin/dashboard' })
-      if (user.role === 'admin')   return navigate({ to: '/admin/verification' })
+      if (user.role === 'admin') return navigate({ to: '/admin/verification' })
       if (user.role === 'support') return navigate({ to: '/support/dashboard' })
 
-      // Owner: route by onboarding status
-      const s = user.onboardingStatus
-      if (s === 'approved') return navigate({ to: '/owner/dashboard' })
-      if (s === 'submitted' || s === 'under_review' || s === 'revision_requested' || s === 'rejected')
-        return navigate({ to: '/owner/status' })
-      navigate({ to: '/owner/onboarding/step1' })
+      navigate({ to: '/owner/access' })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed')
       setApiError(true)
@@ -86,11 +112,9 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-
       {/* ── Left: form panel ── */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 bg-white overflow-y-auto">
         <div className="w-full max-w-sm">
-
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-9">
             <EzyMark size={38} className="shrink-0" />
@@ -107,10 +131,7 @@ export function LoginPage() {
           <form
             onSubmit={handleSubmit(onSubmit)}
             noValidate
-            className={cn(
-              'space-y-4',
-              shaking && 'animate-[shake_0.4s_ease-in-out]'
-            )}
+            className={cn('space-y-4', shaking && 'animate-[shake_0.4s_ease-in-out]')}
           >
             <FieldWrapper label="Email address" error={errors.email?.message} required>
               <Input
@@ -209,7 +230,10 @@ export function LoginPage() {
       {/* ── Right: brand panel ── */}
       <div
         className="hidden lg:flex flex-1 flex-col items-center justify-center p-12 text-white relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%)' }}
+        style={{
+          background:
+            'linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%)',
+        }}
         aria-hidden="true"
       >
         {/* Background decoration */}
@@ -226,7 +250,8 @@ export function LoginPage() {
             Grow your property business with EzyHotels
           </h2>
           <p className="text-white/75 text-base leading-relaxed mb-8">
-            India's fastest-growing hourly & overnight booking platform for hotels, resorts, and homestays.
+            India's fastest-growing hourly & overnight booking platform for hotels, resorts, and
+            homestays.
           </p>
 
           {/* Feature list */}
@@ -260,7 +285,6 @@ export function LoginPage() {
           </div>
         </div>
       </div>
-
     </div>
   )
 }
