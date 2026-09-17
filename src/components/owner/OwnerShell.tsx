@@ -1,3 +1,5 @@
+import { HotelAccessSync } from './HotelAccessSync'
+import { canAccessHotelRoute } from '@/lib/hotel-access'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   LayoutDashboard, CalendarDays, BookOpen, BarChart2,
@@ -15,6 +17,8 @@ import { AutoSaveIndicator } from '@/components/shared/AutoSaveIndicator'
 import { ownerNotificationsApi } from '@/lib/api/ownerNotifications'
 
 const NAV_ITEMS = [
+  { href: '/owner/access', label: 'Your hotels', icon: BedDouble, needsApproval: false },
+  { href: '/owner/team', label: 'Team & roles', icon: Settings, needsApproval: true },
   { href: '/owner/dashboard', label: 'Dashboard',      icon: LayoutDashboard, needsApproval: true },
   { href: '/owner/bookings',  label: 'Bookings',       icon: BookOpen,        needsApproval: true },
   { href: '/owner/availability', label: 'Availability', icon: CalendarDays,   needsApproval: true },
@@ -62,6 +66,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={200}>
+      <HotelAccessSync />
       <div className="flex h-screen overflow-hidden bg-navy-50">
         {/* Sidebar */}
         <aside className={cn(
@@ -74,7 +79,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             {!collapsed && (
               <div>
                 <EzyWordmark className="font-display font-bold text-[15px] leading-none" />
-                <p className="text-[10px] text-navy-400 uppercase tracking-wider mt-0.5">Owner portal</p>
+                <p className="text-[10px] text-navy-400 uppercase tracking-wider mt-0.5">Hotel portal</p>
               </div>
             )}
           </div>
@@ -82,7 +87,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto thin-scroll py-3 space-y-0.5 px-2">
             {NAV_ITEMS.map(({ href, label, icon: Icon, needsApproval }) => {
-              const locked = needsApproval && !isApproved
+              const locked = needsApproval && !canAccessHotelRoute(user, href)
               const active = pathname === href || pathname.startsWith(href + '/')
 
               const item = (
@@ -249,7 +254,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 
           <nav className="md:hidden flex gap-2 overflow-x-auto border-b border-border bg-white px-4 py-2" aria-label="Owner mobile navigation">
             {NAV_ITEMS.map(({ href, label, needsApproval }) => {
-              const locked = needsApproval && !isApproved
+              const locked = needsApproval && !canAccessHotelRoute(user, href)
               const active = pathname === href || pathname.startsWith(href + '/')
               return locked ? (
                 <span key={href} className="whitespace-nowrap rounded-[10px] px-3 py-2 text-sm font-semibold text-navy-300">

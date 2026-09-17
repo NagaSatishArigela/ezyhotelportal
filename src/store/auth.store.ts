@@ -12,6 +12,7 @@ interface AuthState {
   rememberMe: boolean
 
   setAuth: (user: User, token: string, rememberMe?: boolean, refreshToken?: string) => void
+  setUser: (user: User) => void
   setToken: (token: string) => void
   setRefreshToken: (refreshToken: string) => void
   updateOnboardingStatus: (status: OnboardingStatus, step?: number) => void
@@ -70,6 +71,7 @@ export const useAuthStore = create<AuthState>()(
         set({ user, token, refreshToken: refreshToken ?? null, isAuthenticated: true, rememberMe })
       },
 
+      setUser: (user) => set({ user }),
       setToken: (token) => set({ token }),
 
       setRefreshToken: (refreshToken) => set({ refreshToken }),

@@ -1,3 +1,5 @@
+import { withMembership } from './hotel-access'
+import type { HotelMembership } from '@/types'
 /**
  * portal-api.ts — real backend API calls for the partner portal.
  * Uses the shared `api` axios instance which auto-attaches the Bearer token
@@ -5,33 +7,19 @@
  */
 import { api } from './api'
 import { presignError, UploadError } from './upload-error'
-import type { User, Role, OnboardingStatus } from '@/types'
+import type { User, Role } from '@/types'
 
 // ── Type helpers ────────────────────────────────────────────────────────────
 
 type GlobalRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'SUPPORT'
-type PropertyStatus = 'draft' | 'pending_review' | 'needs_revision' | 'approved' | 'rejected' | 'suspended' | 'escalated' | null
 
 function mapRole(globalRole: GlobalRole): Role {
   if (globalRole === 'SUPER_ADMIN') return 'super_admin'
   if (globalRole === 'ADMIN') return 'admin'
   if (globalRole === 'SUPPORT') return 'support'
-  return 'owner'
+  return 'applicant'
 }
 
-function mapPropertyStatus(status: PropertyStatus): OnboardingStatus {
-  switch (status) {
-    case null:              return 'not_started'
-    case 'draft':           return 'in_progress'
-    case 'pending_review':  return 'submitted'
-    case 'needs_revision':  return 'revision_requested'
-    case 'approved':        return 'approved'
-    case 'rejected':        return 'rejected'
-    case 'escalated':       return 'under_review'
-    case 'suspended':       return 'suspended'
-    default:                return 'in_progress'
-  }
-}
 
 function buildInitials(name: string): string {
   return name
@@ -73,29 +61,8 @@ export async function portalLogin(email: string, password: string): Promise<Port
   const name = srv.name ?? email.split('@')[0]
 
   // Step 2 — for owners, check their property status
-  let onboardingStatus: OnboardingStatus = 'approved' // default for admins
-  let propertyId: string | undefined
-
-  if (role === 'owner') {
-    try {
-      const { data: propData } = await api.get<{
-        id: string | null
-        status: PropertyStatus
-        draftStep: number | null
-      }>('/me/property-status', {
-        headers: { Authorization: `Bearer ${tokens.accessToken}` },
-      })
-      onboardingStatus = mapPropertyStatus(propData.status)
-      if (propData.id) propertyId = propData.id
-    } catch (err) {
-      // Re-throw: silently defaulting would route an approved owner to the
-      // onboarding wizard on any transient network error. Let the login
-      // form's onError handler show a toast so the user can retry.
-      console.error('[portalLogin] GET /me/property-status failed:', err)
-      throw new Error('Unable to load your account status. Please try logging in again.')
-    }
-  }
-
+  const memberships = role === 'applicant' ? (await api.get<HotelMembership[]>('/me/properties', { headers: { Authorization: `Bearer ${tokens.accessToken}` } })).data : []
+  const selected = memberships.find(m => m.status === 'approved' && m.role) ?? memberships.find(m => m.isApplicant)
   const user: User = {
     id: srv.id,
     name,
@@ -103,12 +70,10 @@ export async function portalLogin(email: string, password: string): Promise<Port
     phone: srv.phone,
     role,
     avatarInitials: buildInitials(name),
-    onboardingStatus,
-    onboardingStep: onboardingStatus === 'in_progress' ? 1 : undefined,
-    propertyId,
+    onboardingStatus: 'approved',
   }
 
-  return { user, token: tokens.accessToken, refreshToken: tokens.refreshToken }
+  return { user: role === 'applicant' ? withMembership(user, selected, memberships) : user, token: tokens.accessToken, refreshToken: tokens.refreshToken }
 }
 
 // ── Owner onboarding ──────────────────────────────────────────────────────────
