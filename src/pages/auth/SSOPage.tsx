@@ -1,3 +1,4 @@
+import { queryClient } from '@/lib/queryClient'
 import { api } from '@/lib/api'
 import { withMembership } from '@/lib/hotel-access'
 import type { HotelMembership } from '@/types'
@@ -78,10 +79,22 @@ export function SSOPage() {
       }
 
       const headers = { Authorization: `Bearer ${tokens.accessToken}` }
-      const { data: profile } = await api.get<{ id: string; globalRole: string }>('/auth/me', { headers })
+      const { data: profile } = await api.get<{ id: string; globalRole: string }>('/auth/me', {
+        headers,
+      })
       if (profile.id !== user.id || profile.globalRole !== 'USER') return fail()
       const { data: memberships } = await api.get<HotelMembership[]>('/me/properties', { headers })
-      setAuth(withMembership(user, memberships.find(m => m.role && m.status === 'approved') ?? memberships[0], memberships), tokens.accessToken, false, tokens.refreshToken)
+      queryClient.clear()
+      setAuth(
+        withMembership(
+          user,
+          memberships.find((m) => m.role && m.status === 'approved') ?? memberships[0],
+          memberships
+        ),
+        tokens.accessToken,
+        false,
+        tokens.refreshToken
+      )
 
       // Fresh onboarding — reset any previous draft then pre-fill Step 1
       reset()
@@ -104,7 +117,9 @@ export function SSOPage() {
           <Loader2 size={18} className="animate-spin text-primary-600" />
           Setting up your account…
         </div>
-        <p className="text-sm text-navy-400">You'll land on your onboarding wizard in a moment.</p>
+        <p className="text-sm text-navy-400">
+          You'll see your hotels and applications in a moment.
+        </p>
       </div>
     </div>
   )

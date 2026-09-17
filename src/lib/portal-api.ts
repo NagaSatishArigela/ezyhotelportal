@@ -20,13 +20,14 @@ function mapRole(globalRole: GlobalRole): Role {
   return 'applicant'
 }
 
-
 function buildInitials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('') || name.slice(0, 2).toUpperCase()
+  return (
+    name
+      .split(' ')
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? '')
+      .join('') || name.slice(0, 2).toUpperCase()
+  )
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ export interface PortalLoginResult {
 /**
  * Replaces the mock authApi.login().
  * 1. POST /auth/login  → tokens + server user
- * 2. GET  /me/property-status  → owner's current property & status (owners only)
+ * 2. GET  /me/properties  → hotel memberships and applications (global users)
  */
 export async function portalLogin(email: string, password: string): Promise<PortalLoginResult> {
   // Step 1 — login
@@ -60,9 +61,18 @@ export async function portalLogin(email: string, password: string): Promise<Port
   const role = mapRole(srv.globalRole)
   const name = srv.name ?? email.split('@')[0]
 
-  // Step 2 — for owners, check their property status
-  const memberships = role === 'applicant' ? (await api.get<HotelMembership[]>('/me/properties', { headers: { Authorization: `Bearer ${tokens.accessToken}` } })).data : []
-  const selected = memberships.find(m => m.status === 'approved' && m.role) ?? memberships.find(m => m.isApplicant)
+  // Step 2 — resolve property-scoped roles for global users
+  const memberships =
+    role === 'applicant'
+      ? (
+          await api.get<HotelMembership[]>('/me/properties', {
+            headers: { Authorization: `Bearer ${tokens.accessToken}` },
+          })
+        ).data
+      : []
+  const selected =
+    memberships.find((m) => m.status === 'approved' && m.role) ??
+    memberships.find((m) => m.isApplicant)
   const user: User = {
     id: srv.id,
     name,
@@ -73,7 +83,11 @@ export async function portalLogin(email: string, password: string): Promise<Port
     onboardingStatus: 'approved',
   }
 
-  return { user: role === 'applicant' ? withMembership(user, selected, memberships) : user, token: tokens.accessToken, refreshToken: tokens.refreshToken }
+  return {
+    user: role === 'applicant' ? withMembership(user, selected, memberships) : user,
+    token: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  }
 }
 
 // ── Owner onboarding ──────────────────────────────────────────────────────────
@@ -88,7 +102,7 @@ export async function createPropertyDraft(): Promise<string> {
 export async function saveOnboardingStep(
   propertyId: string,
   step: number,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): Promise<void> {
   await api.patch(`/properties/${propertyId}/step/${step}`, data)
 }
@@ -141,7 +155,9 @@ export function latestRevisionItems(revisionNotes: unknown): RevisionItem[] {
   if (!last || !Array.isArray(last.items)) return []
   return last.items.filter(
     (i): i is RevisionItem =>
-      !!i && typeof (i as RevisionItem).field === 'string' && typeof (i as RevisionItem).reason === 'string',
+      !!i &&
+      typeof (i as RevisionItem).field === 'string' &&
+      typeof (i as RevisionItem).reason === 'string'
   )
 }
 
@@ -159,7 +175,9 @@ export async function getPropertyDraft(propertyId: string): Promise<{
 // ── Thin wrappers kept for backward compat with ownerApi mock call sites ─────
 
 /** IFSC lookup — kept as mock until a real IFSC provider is configured. */
-export async function verifyIFSC(ifsc: string): Promise<{ bank: string; branch: string; city: string }> {
+export async function verifyIFSC(
+  ifsc: string
+): Promise<{ bank: string; branch: string; city: string }> {
   const MOCK: Record<string, { bank: string; branch: string; city: string }> = {
     HDFC0001234: { bank: 'HDFC Bank', branch: 'Connaught Place', city: 'New Delhi' },
     SBIN0001234: { bank: 'State Bank of India', branch: 'MG Road', city: 'Bengaluru' },
@@ -183,29 +201,51 @@ export async function pennyDrop(): Promise<{ success: boolean; amount: number; m
 export async function uploadFile(
   file: File,
   propertyId: string,
-  kind: 'photo' | 'document',
+  kind: 'photo' | 'document'
 ): Promise<{ url: string; key: string }> {
-  const { data } = await api.post<{ uploadUrl: string; url: string; key: string }>('/uploads/presign', {
-    propertyId,
-    kind,
-    fileName: file.name,
-    contentType: file.type,
-    size: file.size,
-  }).catch((error: unknown) => { throw presignError(error) })
+  const { data } = await api
+    .post<{ uploadUrl: string; url: string; key: string }>('/uploads/presign', {
+      propertyId,
+      kind,
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    })
+    .catch((error: unknown) => {
+      throw presignError(error)
+    })
 
   const validUrl = (value: unknown) => {
     if (typeof value !== 'string') return false
-    try { return ['http:', 'https:'].includes(new URL(value).protocol) } catch { return false }
+    try {
+      return ['http:', 'https:'].includes(new URL(value).protocol)
+    } catch {
+      return false
+    }
   }
-  if (!validUrl(data?.uploadUrl) || !validUrl(data?.url) || typeof data?.key !== 'string' || !data.key) {
-    throw new UploadError('The upload service returned an invalid upload URL. Please try again or contact support.')
+  if (
+    !validUrl(data?.uploadUrl) ||
+    !validUrl(data?.url) ||
+    typeof data?.key !== 'string' ||
+    !data.key
+  ) {
+    throw new UploadError(
+      'The upload service returned an invalid upload URL. Please try again or contact support.'
+    )
   }
   const uploadResponse = await fetch(data.uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },
     body: file,
-  }).catch(() => { throw new UploadError('Could not send the file to storage. Check your connection; storage access may need administrator attention.') })
-  if (!uploadResponse.ok) throw new UploadError(`Storage rejected the upload (HTTP ${uploadResponse.status}). Please try again or contact support.`)
+  }).catch(() => {
+    throw new UploadError(
+      'Could not send the file to storage. Check your connection; storage access may need administrator attention.'
+    )
+  })
+  if (!uploadResponse.ok)
+    throw new UploadError(
+      `Storage rejected the upload (HTTP ${uploadResponse.status}). Please try again or contact support.`
+    )
   return { url: data.url, key: data.key }
 }
 

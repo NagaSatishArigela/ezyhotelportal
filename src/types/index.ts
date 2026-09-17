@@ -1,4 +1,5 @@
-export type Role = 'applicant' | 'hotel_admin' | 'manager' | 'staff' | 'owner' | 'admin' | 'support' | 'super_admin'
+export type Role =
+  'applicant' | 'hotel_admin' | 'manager' | 'staff' | 'owner' | 'admin' | 'support' | 'super_admin'
 
 export type OnboardingStatus =
   | 'not_started'
@@ -19,7 +20,7 @@ export interface User {
   avatarInitials: string
   businessEntity?: 'individual' | 'sole_prop' | 'pvt_ltd' | 'partnership' | 'llp'
   onboardingStatus?: OnboardingStatus
-  onboardingStep?: number   // 1-7, which onboarding step they're on
+  onboardingStep?: number // 1-7, which onboarding step they're on
   permissions?: string[]
   memberships?: HotelMembership[]
   propertyId?: string
@@ -38,6 +39,9 @@ export interface AuthTokenPayload {
 
 export type Permission =
   // Owner
+  | 'check_in_out'
+  | 'manage_staff'
+  | 'manage_disputes'
   | 'view_onboarding'
   | 'submit_onboarding'
   | 'view_approval_status'
@@ -69,6 +73,12 @@ export type Permission =
   | 'escalate_to_admin'
 
 export interface HotelMembership {
- propertyId: string; name: string; status: string; isActive: boolean; isApplicant: boolean;
- role: 'OWNER' | 'HOTEL_ADMIN' | 'MANAGER' | 'STAFF' | null; roleName: string | null; permissions: string[];
+  propertyId: string
+  name: string
+  status: string
+  isActive: boolean
+  isApplicant: boolean
+  role: 'OWNER' | 'HOTEL_ADMIN' | 'MANAGER' | 'STAFF' | null
+  roleName: string | null
+  permissions: string[]
 }

@@ -16,7 +16,12 @@ export function requireAuth(role?: Role) {
   }
 
   const hotelRoles: Role[] = ['owner', 'applicant', 'hotel_admin', 'manager', 'staff']
-  if (role && user.role !== role && !(role === 'owner' && hotelRoles.includes(user.role)) && !(user.role === 'super_admin' && (role === 'admin' || role === 'support'))) {
+  if (
+    role &&
+    user.role !== role &&
+    !(role === 'owner' && hotelRoles.includes(user.role)) &&
+    !(user.role === 'super_admin' && (role === 'admin' || role === 'support'))
+  ) {
     throw redirect({ to: '/login' })
   }
 }

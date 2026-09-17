@@ -1,14 +1,10 @@
 import { api } from '../api'
 
-// Read-only owner view of a property's bookings.
-// Backend: GET /owner/properties/:propertyId/bookings (owner-scoped, paginated).
-// NOTE: this endpoint is READ-ONLY — there is no owner endpoint to create a
-// booking or to check-in/out/cancel, so the owner Bookings screen must not
-// offer those actions.
+// Property-scoped booking reads; check-in/out require the server-issued permission.
 
 export type OwnerBookingType = 'hourly' | 'fullday'
 export type OwnerBookingStatus =
-  | 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'no_show' | 'voided'
+  'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'no_show' | 'voided'
 
 export interface OwnerBookingItem {
   id: string
@@ -38,7 +34,9 @@ export const ownerBookingsApi = {
   checkOut: (id: string) => api.post('/bookings/' + id + '/check-out'),
   list(propertyId: string, page = 1, limit = 20): Promise<OwnerBookingsResult> {
     return api
-      .get<OwnerBookingsResult>(`/owner/properties/${propertyId}/bookings`, { params: { page, limit } })
+      .get<OwnerBookingsResult>(`/owner/properties/${propertyId}/bookings`, {
+        params: { page, limit },
+      })
       .then((r) => r.data)
   },
 }
