@@ -1,3 +1,5 @@
+import { useOnboardingStore } from '@/store/onboarding.store'
+import { queryClient } from '@/lib/queryClient'
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
@@ -60,6 +62,8 @@ export function LoginPage() {
   const onSubmit = async ({ email, password, rememberMe }: LoginForm) => {
     try {
       const { user, token, refreshToken } = await portalLogin(email, password)
+      if (useAuthStore.getState().user?.id !== user.id) useOnboardingStore.getState().reset()
+      queryClient.clear()
       setAuth(user, token, rememberMe, refreshToken)
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`)
 
@@ -67,12 +71,7 @@ export function LoginPage() {
       if (user.role === 'admin')   return navigate({ to: '/admin/verification' })
       if (user.role === 'support') return navigate({ to: '/support/dashboard' })
 
-      // Owner: route by onboarding status
-      const s = user.onboardingStatus
-      if (s === 'approved') return navigate({ to: '/owner/dashboard' })
-      if (s === 'submitted' || s === 'under_review' || s === 'revision_requested' || s === 'rejected')
-        return navigate({ to: '/owner/status' })
-      navigate({ to: '/owner/onboarding/step1' })
+      navigate({ to: '/owner/access' })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed')
       setApiError(true)

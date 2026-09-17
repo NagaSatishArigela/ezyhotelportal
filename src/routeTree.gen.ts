@@ -9,77 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SsoRouteImport } from './routes/sso'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as SupportRouteRouteImport } from './routes/support/route'
-import { Route as SuperAdminRouteRouteImport } from './routes/super-admin/route'
-import { Route as OwnerRouteRouteImport } from './routes/owner/route'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SupportUsersRouteImport } from './routes/support/users'
-import { Route as SupportTicketsRouteImport } from './routes/support/tickets'
-import { Route as SupportDashboardRouteImport } from './routes/support/dashboard'
-import { Route as SuperAdminSettingsRouteImport } from './routes/super-admin/settings'
-import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
-import { Route as SuperAdminAdminsRouteImport } from './routes/super-admin/admins'
-import { Route as OwnerPortalRouteImport } from './routes/owner/_portal'
-import { Route as AdminVerificationRouteImport } from './routes/admin/verification'
-import { Route as AdminUsersRouteImport } from './routes/admin/users'
-import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
-import { Route as AdminPropertiesRouteImport } from './routes/admin/properties'
-import { Route as AdminPayoutsRouteImport } from './routes/admin/payouts'
-import { Route as AdminDisputesRouteImport } from './routes/admin/disputes'
-import { Route as AdminBookingsRouteImport } from './routes/admin/bookings'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OwnerRouteRouteImport } from './routes/owner/route'
+import { Route as SsoRouteImport } from './routes/sso'
+import { Route as SuperAdminRouteRouteImport } from './routes/super-admin/route'
+import { Route as SupportRouteRouteImport } from './routes/support/route'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
+import { Route as AdminBookingsRouteImport } from './routes/admin/bookings'
+import { Route as AdminDisputesRouteImport } from './routes/admin/disputes'
+import { Route as AdminPayoutsRouteImport } from './routes/admin/payouts'
+import { Route as AdminPropertiesRouteImport } from './routes/admin/properties'
+import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminVerificationRouteImport } from './routes/admin/verification'
+import { Route as OwnerPortalRouteImport } from './routes/owner/_portal'
 import { Route as OwnerOnboardingRouteRouteImport } from './routes/owner/onboarding/route'
-import { Route as OwnerOnboardingStep7RouteImport } from './routes/owner/onboarding/step7'
-import { Route as OwnerOnboardingStep6RouteImport } from './routes/owner/onboarding/step6'
-import { Route as OwnerOnboardingStep5RouteImport } from './routes/owner/onboarding/step5'
-import { Route as OwnerOnboardingStep4RouteImport } from './routes/owner/onboarding/step4'
-import { Route as OwnerOnboardingStep3RouteImport } from './routes/owner/onboarding/step3'
-import { Route as OwnerOnboardingStep2RouteImport } from './routes/owner/onboarding/step2'
-import { Route as OwnerOnboardingStep1RouteImport } from './routes/owner/onboarding/step1'
-import { Route as OwnerPortalStatusRouteImport } from './routes/owner/_portal/status'
-import { Route as OwnerPortalSettingsRouteImport } from './routes/owner/_portal/settings'
-import { Route as OwnerPortalRoomsRouteImport } from './routes/owner/_portal/rooms'
-import { Route as OwnerPortalReviewsRouteImport } from './routes/owner/_portal/reviews'
-import { Route as OwnerPortalPayoutsRouteImport } from './routes/owner/_portal/payouts'
-import { Route as OwnerPortalNotificationsRouteImport } from './routes/owner/_portal/notifications'
-import { Route as OwnerPortalDisputesRouteImport } from './routes/owner/_portal/disputes'
-import { Route as OwnerPortalDashboardRouteImport } from './routes/owner/_portal/dashboard'
-import { Route as OwnerPortalBookingsRouteImport } from './routes/owner/_portal/bookings'
-import { Route as OwnerPortalAvailabilityRouteImport } from './routes/owner/_portal/availability'
+import { Route as SuperAdminAdminsRouteImport } from './routes/super-admin/admins'
+import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
+import { Route as SuperAdminPropertiesRouteImport } from './routes/super-admin/properties'
+import { Route as SuperAdminSettingsRouteImport } from './routes/super-admin/settings'
+import { Route as SuperAdminUsersRouteImport } from './routes/super-admin/users'
+import { Route as SupportDashboardRouteImport } from './routes/support/dashboard'
+import { Route as SupportTicketsRouteImport } from './routes/support/tickets'
+import { Route as SupportUsersRouteImport } from './routes/support/users'
+import { Route as OwnerPortalAccessRouteImport } from './routes/owner/_portal/access'
 import { Route as OwnerPortalAnalyticsRouteImport } from './routes/owner/_portal/analytics'
+import { Route as OwnerPortalAvailabilityRouteImport } from './routes/owner/_portal/availability'
+import { Route as OwnerPortalBookingsRouteImport } from './routes/owner/_portal/bookings'
+import { Route as OwnerPortalDashboardRouteImport } from './routes/owner/_portal/dashboard'
+import { Route as OwnerPortalDisputesRouteImport } from './routes/owner/_portal/disputes'
+import { Route as OwnerPortalNotificationsRouteImport } from './routes/owner/_portal/notifications'
+import { Route as OwnerPortalPayoutsRouteImport } from './routes/owner/_portal/payouts'
+import { Route as OwnerPortalReviewsRouteImport } from './routes/owner/_portal/reviews'
+import { Route as OwnerPortalRoomsRouteImport } from './routes/owner/_portal/rooms'
+import { Route as OwnerPortalSettingsRouteImport } from './routes/owner/_portal/settings'
+import { Route as OwnerPortalStatusRouteImport } from './routes/owner/_portal/status'
+import { Route as OwnerPortalTeamRouteImport } from './routes/owner/_portal/team'
+import { Route as OwnerOnboardingStep1RouteImport } from './routes/owner/onboarding/step1'
+import { Route as OwnerOnboardingStep2RouteImport } from './routes/owner/onboarding/step2'
+import { Route as OwnerOnboardingStep3RouteImport } from './routes/owner/onboarding/step3'
+import { Route as OwnerOnboardingStep4RouteImport } from './routes/owner/onboarding/step4'
+import { Route as OwnerOnboardingStep5RouteImport } from './routes/owner/onboarding/step5'
+import { Route as OwnerOnboardingStep6RouteImport } from './routes/owner/onboarding/step6'
+import { Route as OwnerOnboardingStep7RouteImport } from './routes/owner/onboarding/step7'
 
-const SsoRoute = SsoRouteImport.update({
-  id: '/sso',
-  path: '/sso',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SupportRouteRoute = SupportRouteRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SuperAdminRouteRoute = SuperAdminRouteRouteImport.update({
-  id: '/super-admin',
-  path: '/super-admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OwnerRouteRoute = OwnerRouteRouteImport.update({
-  id: '/owner',
-  path: '/owner',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
@@ -87,73 +66,39 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SupportUsersRoute = SupportUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => SupportRouteRoute,
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SupportTicketsRoute = SupportTicketsRouteImport.update({
-  id: '/tickets',
-  path: '/tickets',
-  getParentRoute: () => SupportRouteRoute,
+const OwnerRouteRoute = OwnerRouteRouteImport.update({
+  id: '/owner',
+  path: '/owner',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SupportDashboardRoute = SupportDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => SupportRouteRoute,
+const SsoRoute = SsoRouteImport.update({
+  id: '/sso',
+  path: '/sso',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SuperAdminSettingsRoute = SuperAdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => SuperAdminRouteRoute,
+const SuperAdminRouteRoute = SuperAdminRouteRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SuperAdminDashboardRoute = SuperAdminDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => SuperAdminRouteRoute,
+const SupportRouteRoute = SupportRouteRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SuperAdminAdminsRoute = SuperAdminAdminsRouteImport.update({
-  id: '/admins',
-  path: '/admins',
-  getParentRoute: () => SuperAdminRouteRoute,
-} as any)
-const OwnerPortalRoute = OwnerPortalRouteImport.update({
-  id: '/_portal',
-  getParentRoute: () => OwnerRouteRoute,
-} as any)
-const AdminVerificationRoute = AdminVerificationRouteImport.update({
-  id: '/verification',
-  path: '/verification',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminReviewsRoute = AdminReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminPropertiesRoute = AdminPropertiesRouteImport.update({
-  id: '/properties',
-  path: '/properties',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
-  id: '/payouts',
-  path: '/payouts',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminDisputesRoute = AdminDisputesRouteImport.update({
-  id: '/disputes',
-  path: '/disputes',
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminBookingsRoute = AdminBookingsRouteImport.update({
@@ -161,74 +106,113 @@ const AdminBookingsRoute = AdminBookingsRouteImport.update({
   path: '/bookings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const AdminDisputesRoute = AdminDisputesRouteImport.update({
+  id: '/disputes',
+  path: '/disputes',
   getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPropertiesRoute = AdminPropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminReviewsRoute = AdminReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminVerificationRoute = AdminVerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const OwnerPortalRoute = OwnerPortalRouteImport.update({
+  id: '/_portal',
+  getParentRoute: () => OwnerRouteRoute,
 } as any)
 const OwnerOnboardingRouteRoute = OwnerOnboardingRouteRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
   getParentRoute: () => OwnerRouteRoute,
 } as any)
-const OwnerOnboardingStep7Route = OwnerOnboardingStep7RouteImport.update({
-  id: '/step7',
-  path: '/step7',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
+const SuperAdminAdminsRoute = SuperAdminAdminsRouteImport.update({
+  id: '/admins',
+  path: '/admins',
+  getParentRoute: () => SuperAdminRouteRoute,
 } as any)
-const OwnerOnboardingStep6Route = OwnerOnboardingStep6RouteImport.update({
-  id: '/step6',
-  path: '/step6',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
+const SuperAdminDashboardRoute = SuperAdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => SuperAdminRouteRoute,
 } as any)
-const OwnerOnboardingStep5Route = OwnerOnboardingStep5RouteImport.update({
-  id: '/step5',
-  path: '/step5',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
+const SuperAdminPropertiesRoute = SuperAdminPropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
+  getParentRoute: () => SuperAdminRouteRoute,
 } as any)
-const OwnerOnboardingStep4Route = OwnerOnboardingStep4RouteImport.update({
-  id: '/step4',
-  path: '/step4',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
-} as any)
-const OwnerOnboardingStep3Route = OwnerOnboardingStep3RouteImport.update({
-  id: '/step3',
-  path: '/step3',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
-} as any)
-const OwnerOnboardingStep2Route = OwnerOnboardingStep2RouteImport.update({
-  id: '/step2',
-  path: '/step2',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
-} as any)
-const OwnerOnboardingStep1Route = OwnerOnboardingStep1RouteImport.update({
-  id: '/step1',
-  path: '/step1',
-  getParentRoute: () => OwnerOnboardingRouteRoute,
-} as any)
-const OwnerPortalStatusRoute = OwnerPortalStatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => OwnerPortalRoute,
-} as any)
-const OwnerPortalSettingsRoute = OwnerPortalSettingsRouteImport.update({
+const SuperAdminSettingsRoute = SuperAdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminUsersRoute = SuperAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SupportDashboardRoute = SupportDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => SupportRouteRoute,
+} as any)
+const SupportTicketsRoute = SupportTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => SupportRouteRoute,
+} as any)
+const SupportUsersRoute = SupportUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => SupportRouteRoute,
+} as any)
+const OwnerPortalAccessRoute = OwnerPortalAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalRoomsRoute = OwnerPortalRoomsRouteImport.update({
-  id: '/rooms',
-  path: '/rooms',
+const OwnerPortalAnalyticsRoute = OwnerPortalAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalReviewsRoute = OwnerPortalReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
+const OwnerPortalAvailabilityRoute = OwnerPortalAvailabilityRouteImport.update({
+  id: '/availability',
+  path: '/availability',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalPayoutsRoute = OwnerPortalPayoutsRouteImport.update({
-  id: '/payouts',
-  path: '/payouts',
+const OwnerPortalBookingsRoute = OwnerPortalBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => OwnerPortalRoute,
+} as any)
+const OwnerPortalDashboardRoute = OwnerPortalDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => OwnerPortalRoute,
+} as any)
+const OwnerPortalDisputesRoute = OwnerPortalDisputesRouteImport.update({
+  id: '/disputes',
+  path: '/disputes',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
 const OwnerPortalNotificationsRoute =
@@ -237,36 +221,76 @@ const OwnerPortalNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => OwnerPortalRoute,
   } as any)
-const OwnerPortalDisputesRoute = OwnerPortalDisputesRouteImport.update({
-  id: '/disputes',
-  path: '/disputes',
+const OwnerPortalPayoutsRoute = OwnerPortalPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalDashboardRoute = OwnerPortalDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const OwnerPortalReviewsRoute = OwnerPortalReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalBookingsRoute = OwnerPortalBookingsRouteImport.update({
-  id: '/bookings',
-  path: '/bookings',
+const OwnerPortalRoomsRoute = OwnerPortalRoomsRouteImport.update({
+  id: '/rooms',
+  path: '/rooms',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalAvailabilityRoute = OwnerPortalAvailabilityRouteImport.update({
-  id: '/availability',
-  path: '/availability',
+const OwnerPortalSettingsRoute = OwnerPortalSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
-const OwnerPortalAnalyticsRoute = OwnerPortalAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const OwnerPortalStatusRoute = OwnerPortalStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
   getParentRoute: () => OwnerPortalRoute,
+} as any)
+const OwnerPortalTeamRoute = OwnerPortalTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => OwnerPortalRoute,
+} as any)
+const OwnerOnboardingStep1Route = OwnerOnboardingStep1RouteImport.update({
+  id: '/step1',
+  path: '/step1',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
+} as any)
+const OwnerOnboardingStep2Route = OwnerOnboardingStep2RouteImport.update({
+  id: '/step2',
+  path: '/step2',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
+} as any)
+const OwnerOnboardingStep3Route = OwnerOnboardingStep3RouteImport.update({
+  id: '/step3',
+  path: '/step3',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
+} as any)
+const OwnerOnboardingStep4Route = OwnerOnboardingStep4RouteImport.update({
+  id: '/step4',
+  path: '/step4',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
+} as any)
+const OwnerOnboardingStep5Route = OwnerOnboardingStep5RouteImport.update({
+  id: '/step5',
+  path: '/step5',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
+} as any)
+const OwnerOnboardingStep6Route = OwnerOnboardingStep6RouteImport.update({
+  id: '/step6',
+  path: '/step6',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
+} as any)
+const OwnerOnboardingStep7Route = OwnerOnboardingStep7RouteImport.update({
+  id: '/step7',
+  path: '/step7',
+  getParentRoute: () => OwnerOnboardingRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
-  '/owner': typeof OwnerPortalRouteWithChildren
+  '/owner': typeof OwnerRouteRouteWithChildren
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
@@ -283,10 +307,13 @@ export interface FileRoutesByFullPath {
   '/admin/verification': typeof AdminVerificationRoute
   '/super-admin/admins': typeof SuperAdminAdminsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/properties': typeof SuperAdminPropertiesRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/users': typeof SuperAdminUsersRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
+  '/owner/access': typeof OwnerPortalAccessRoute
   '/owner/analytics': typeof OwnerPortalAnalyticsRoute
   '/owner/availability': typeof OwnerPortalAvailabilityRoute
   '/owner/bookings': typeof OwnerPortalBookingsRoute
@@ -298,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/owner/rooms': typeof OwnerPortalRoomsRoute
   '/owner/settings': typeof OwnerPortalSettingsRoute
   '/owner/status': typeof OwnerPortalStatusRoute
+  '/owner/team': typeof OwnerPortalTeamRoute
   '/owner/onboarding/step1': typeof OwnerOnboardingStep1Route
   '/owner/onboarding/step2': typeof OwnerOnboardingStep2Route
   '/owner/onboarding/step3': typeof OwnerOnboardingStep3Route
@@ -309,7 +337,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
-  '/owner': typeof OwnerPortalRouteWithChildren
+  '/owner': typeof OwnerRouteRouteWithChildren
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
@@ -326,10 +354,13 @@ export interface FileRoutesByTo {
   '/admin/verification': typeof AdminVerificationRoute
   '/super-admin/admins': typeof SuperAdminAdminsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/properties': typeof SuperAdminPropertiesRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/users': typeof SuperAdminUsersRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
+  '/owner/access': typeof OwnerPortalAccessRoute
   '/owner/analytics': typeof OwnerPortalAnalyticsRoute
   '/owner/availability': typeof OwnerPortalAvailabilityRoute
   '/owner/bookings': typeof OwnerPortalBookingsRoute
@@ -341,6 +372,7 @@ export interface FileRoutesByTo {
   '/owner/rooms': typeof OwnerPortalRoomsRoute
   '/owner/settings': typeof OwnerPortalSettingsRoute
   '/owner/status': typeof OwnerPortalStatusRoute
+  '/owner/team': typeof OwnerPortalTeamRoute
   '/owner/onboarding/step1': typeof OwnerOnboardingStep1Route
   '/owner/onboarding/step2': typeof OwnerOnboardingStep2Route
   '/owner/onboarding/step3': typeof OwnerOnboardingStep3Route
@@ -371,10 +403,13 @@ export interface FileRoutesById {
   '/owner/_portal': typeof OwnerPortalRouteWithChildren
   '/super-admin/admins': typeof SuperAdminAdminsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/properties': typeof SuperAdminPropertiesRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/users': typeof SuperAdminUsersRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
+  '/owner/_portal/access': typeof OwnerPortalAccessRoute
   '/owner/_portal/analytics': typeof OwnerPortalAnalyticsRoute
   '/owner/_portal/availability': typeof OwnerPortalAvailabilityRoute
   '/owner/_portal/bookings': typeof OwnerPortalBookingsRoute
@@ -386,6 +421,7 @@ export interface FileRoutesById {
   '/owner/_portal/rooms': typeof OwnerPortalRoomsRoute
   '/owner/_portal/settings': typeof OwnerPortalSettingsRoute
   '/owner/_portal/status': typeof OwnerPortalStatusRoute
+  '/owner/_portal/team': typeof OwnerPortalTeamRoute
   '/owner/onboarding/step1': typeof OwnerOnboardingStep1Route
   '/owner/onboarding/step2': typeof OwnerOnboardingStep2Route
   '/owner/onboarding/step3': typeof OwnerOnboardingStep3Route
@@ -416,10 +452,13 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/super-admin/admins'
     | '/super-admin/dashboard'
+    | '/super-admin/properties'
     | '/super-admin/settings'
+    | '/super-admin/users'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
+    | '/owner/access'
     | '/owner/analytics'
     | '/owner/availability'
     | '/owner/bookings'
@@ -431,6 +470,7 @@ export interface FileRouteTypes {
     | '/owner/rooms'
     | '/owner/settings'
     | '/owner/status'
+    | '/owner/team'
     | '/owner/onboarding/step1'
     | '/owner/onboarding/step2'
     | '/owner/onboarding/step3'
@@ -459,10 +499,13 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/super-admin/admins'
     | '/super-admin/dashboard'
+    | '/super-admin/properties'
     | '/super-admin/settings'
+    | '/super-admin/users'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
+    | '/owner/access'
     | '/owner/analytics'
     | '/owner/availability'
     | '/owner/bookings'
@@ -474,6 +517,7 @@ export interface FileRouteTypes {
     | '/owner/rooms'
     | '/owner/settings'
     | '/owner/status'
+    | '/owner/team'
     | '/owner/onboarding/step1'
     | '/owner/onboarding/step2'
     | '/owner/onboarding/step3'
@@ -503,10 +547,13 @@ export interface FileRouteTypes {
     | '/owner/_portal'
     | '/super-admin/admins'
     | '/super-admin/dashboard'
+    | '/super-admin/properties'
     | '/super-admin/settings'
+    | '/super-admin/users'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
+    | '/owner/_portal/access'
     | '/owner/_portal/analytics'
     | '/owner/_portal/availability'
     | '/owner/_portal/bookings'
@@ -518,6 +565,7 @@ export interface FileRouteTypes {
     | '/owner/_portal/rooms'
     | '/owner/_portal/settings'
     | '/owner/_portal/status'
+    | '/owner/_portal/team'
     | '/owner/onboarding/step1'
     | '/owner/onboarding/step2'
     | '/owner/onboarding/step3'
@@ -540,46 +588,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sso': {
-      id: '/sso'
-      path: '/sso'
-      fullPath: '/sso'
-      preLoaderRoute: typeof SsoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/support': {
-      id: '/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof SupportRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/super-admin': {
-      id: '/super-admin'
-      path: '/super-admin'
-      fullPath: '/super-admin'
-      preLoaderRoute: typeof SuperAdminRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/owner': {
-      id: '/owner'
-      path: '/owner'
-      fullPath: '/owner'
-      preLoaderRoute: typeof OwnerRouteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -589,102 +602,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/support/users': {
-      id: '/support/users'
-      path: '/users'
-      fullPath: '/support/users'
-      preLoaderRoute: typeof SupportUsersRouteImport
-      parentRoute: typeof SupportRouteRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/support/tickets': {
-      id: '/support/tickets'
-      path: '/tickets'
-      fullPath: '/support/tickets'
-      preLoaderRoute: typeof SupportTicketsRouteImport
-      parentRoute: typeof SupportRouteRoute
-    }
-    '/support/dashboard': {
-      id: '/support/dashboard'
-      path: '/dashboard'
-      fullPath: '/support/dashboard'
-      preLoaderRoute: typeof SupportDashboardRouteImport
-      parentRoute: typeof SupportRouteRoute
-    }
-    '/super-admin/settings': {
-      id: '/super-admin/settings'
-      path: '/settings'
-      fullPath: '/super-admin/settings'
-      preLoaderRoute: typeof SuperAdminSettingsRouteImport
-      parentRoute: typeof SuperAdminRouteRoute
-    }
-    '/super-admin/dashboard': {
-      id: '/super-admin/dashboard'
-      path: '/dashboard'
-      fullPath: '/super-admin/dashboard'
-      preLoaderRoute: typeof SuperAdminDashboardRouteImport
-      parentRoute: typeof SuperAdminRouteRoute
-    }
-    '/super-admin/admins': {
-      id: '/super-admin/admins'
-      path: '/admins'
-      fullPath: '/super-admin/admins'
-      preLoaderRoute: typeof SuperAdminAdminsRouteImport
-      parentRoute: typeof SuperAdminRouteRoute
-    }
-    '/owner/_portal': {
-      id: '/owner/_portal'
-      path: ''
+    '/owner': {
+      id: '/owner'
+      path: '/owner'
       fullPath: '/owner'
-      preLoaderRoute: typeof OwnerPortalRouteImport
-      parentRoute: typeof OwnerRouteRoute
+      preLoaderRoute: typeof OwnerRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/verification': {
-      id: '/admin/verification'
-      path: '/verification'
-      fullPath: '/admin/verification'
-      preLoaderRoute: typeof AdminVerificationRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/sso': {
+      id: '/sso'
+      path: '/sso'
+      fullPath: '/sso'
+      preLoaderRoute: typeof SsoRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/super-admin': {
+      id: '/super-admin'
+      path: '/super-admin'
+      fullPath: '/super-admin'
+      preLoaderRoute: typeof SuperAdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/reviews': {
-      id: '/admin/reviews'
-      path: '/reviews'
-      fullPath: '/admin/reviews'
-      preLoaderRoute: typeof AdminReviewsRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/properties': {
-      id: '/admin/properties'
-      path: '/properties'
-      fullPath: '/admin/properties'
-      preLoaderRoute: typeof AdminPropertiesRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/payouts': {
-      id: '/admin/payouts'
-      path: '/payouts'
-      fullPath: '/admin/payouts'
-      preLoaderRoute: typeof AdminPayoutsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/disputes': {
-      id: '/admin/disputes'
-      path: '/disputes'
-      fullPath: '/admin/disputes'
-      preLoaderRoute: typeof AdminDisputesRouteImport
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/bookings': {
@@ -694,12 +658,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBookingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/analytics': {
-      id: '/admin/analytics'
-      path: '/analytics'
-      fullPath: '/admin/analytics'
-      preLoaderRoute: typeof AdminAnalyticsRouteImport
+    '/admin/disputes': {
+      id: '/admin/disputes'
+      path: '/disputes'
+      fullPath: '/admin/disputes'
+      preLoaderRoute: typeof AdminDisputesRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/payouts': {
+      id: '/admin/payouts'
+      path: '/payouts'
+      fullPath: '/admin/payouts'
+      preLoaderRoute: typeof AdminPayoutsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/properties': {
+      id: '/admin/properties'
+      path: '/properties'
+      fullPath: '/admin/properties'
+      preLoaderRoute: typeof AdminPropertiesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/reviews': {
+      id: '/admin/reviews'
+      path: '/reviews'
+      fullPath: '/admin/reviews'
+      preLoaderRoute: typeof AdminReviewsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/verification': {
+      id: '/admin/verification'
+      path: '/verification'
+      fullPath: '/admin/verification'
+      preLoaderRoute: typeof AdminVerificationRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/owner/_portal': {
+      id: '/owner/_portal'
+      path: ''
+      fullPath: '/owner'
+      preLoaderRoute: typeof OwnerPortalRouteImport
+      parentRoute: typeof OwnerRouteRoute
     }
     '/owner/onboarding': {
       id: '/owner/onboarding'
@@ -708,116 +714,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerOnboardingRouteRouteImport
       parentRoute: typeof OwnerRouteRoute
     }
-    '/owner/onboarding/step7': {
-      id: '/owner/onboarding/step7'
-      path: '/step7'
-      fullPath: '/owner/onboarding/step7'
-      preLoaderRoute: typeof OwnerOnboardingStep7RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
+    '/super-admin/admins': {
+      id: '/super-admin/admins'
+      path: '/admins'
+      fullPath: '/super-admin/admins'
+      preLoaderRoute: typeof SuperAdminAdminsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
     }
-    '/owner/onboarding/step6': {
-      id: '/owner/onboarding/step6'
-      path: '/step6'
-      fullPath: '/owner/onboarding/step6'
-      preLoaderRoute: typeof OwnerOnboardingStep6RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
-    }
-    '/owner/onboarding/step5': {
-      id: '/owner/onboarding/step5'
-      path: '/step5'
-      fullPath: '/owner/onboarding/step5'
-      preLoaderRoute: typeof OwnerOnboardingStep5RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
-    }
-    '/owner/onboarding/step4': {
-      id: '/owner/onboarding/step4'
-      path: '/step4'
-      fullPath: '/owner/onboarding/step4'
-      preLoaderRoute: typeof OwnerOnboardingStep4RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
-    }
-    '/owner/onboarding/step3': {
-      id: '/owner/onboarding/step3'
-      path: '/step3'
-      fullPath: '/owner/onboarding/step3'
-      preLoaderRoute: typeof OwnerOnboardingStep3RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
-    }
-    '/owner/onboarding/step2': {
-      id: '/owner/onboarding/step2'
-      path: '/step2'
-      fullPath: '/owner/onboarding/step2'
-      preLoaderRoute: typeof OwnerOnboardingStep2RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
-    }
-    '/owner/onboarding/step1': {
-      id: '/owner/onboarding/step1'
-      path: '/step1'
-      fullPath: '/owner/onboarding/step1'
-      preLoaderRoute: typeof OwnerOnboardingStep1RouteImport
-      parentRoute: typeof OwnerOnboardingRouteRoute
-    }
-    '/owner/_portal/status': {
-      id: '/owner/_portal/status'
-      path: '/status'
-      fullPath: '/owner/status'
-      preLoaderRoute: typeof OwnerPortalStatusRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/settings': {
-      id: '/owner/_portal/settings'
-      path: '/settings'
-      fullPath: '/owner/settings'
-      preLoaderRoute: typeof OwnerPortalSettingsRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/rooms': {
-      id: '/owner/_portal/rooms'
-      path: '/rooms'
-      fullPath: '/owner/rooms'
-      preLoaderRoute: typeof OwnerPortalRoomsRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/reviews': {
-      id: '/owner/_portal/reviews'
-      path: '/reviews'
-      fullPath: '/owner/reviews'
-      preLoaderRoute: typeof OwnerPortalReviewsRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/payouts': {
-      id: '/owner/_portal/payouts'
-      path: '/payouts'
-      fullPath: '/owner/payouts'
-      preLoaderRoute: typeof OwnerPortalPayoutsRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/notifications': {
-      id: '/owner/_portal/notifications'
-      path: '/notifications'
-      fullPath: '/owner/notifications'
-      preLoaderRoute: typeof OwnerPortalNotificationsRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/disputes': {
-      id: '/owner/_portal/disputes'
-      path: '/disputes'
-      fullPath: '/owner/disputes'
-      preLoaderRoute: typeof OwnerPortalDisputesRouteImport
-      parentRoute: typeof OwnerPortalRoute
-    }
-    '/owner/_portal/dashboard': {
-      id: '/owner/_portal/dashboard'
+    '/super-admin/dashboard': {
+      id: '/super-admin/dashboard'
       path: '/dashboard'
-      fullPath: '/owner/dashboard'
-      preLoaderRoute: typeof OwnerPortalDashboardRouteImport
+      fullPath: '/super-admin/dashboard'
+      preLoaderRoute: typeof SuperAdminDashboardRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/properties': {
+      id: '/super-admin/properties'
+      path: '/properties'
+      fullPath: '/super-admin/properties'
+      preLoaderRoute: typeof SuperAdminPropertiesRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/settings': {
+      id: '/super-admin/settings'
+      path: '/settings'
+      fullPath: '/super-admin/settings'
+      preLoaderRoute: typeof SuperAdminSettingsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/users': {
+      id: '/super-admin/users'
+      path: '/users'
+      fullPath: '/super-admin/users'
+      preLoaderRoute: typeof SuperAdminUsersRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/support/dashboard': {
+      id: '/support/dashboard'
+      path: '/dashboard'
+      fullPath: '/support/dashboard'
+      preLoaderRoute: typeof SupportDashboardRouteImport
+      parentRoute: typeof SupportRouteRoute
+    }
+    '/support/tickets': {
+      id: '/support/tickets'
+      path: '/tickets'
+      fullPath: '/support/tickets'
+      preLoaderRoute: typeof SupportTicketsRouteImport
+      parentRoute: typeof SupportRouteRoute
+    }
+    '/support/users': {
+      id: '/support/users'
+      path: '/users'
+      fullPath: '/support/users'
+      preLoaderRoute: typeof SupportUsersRouteImport
+      parentRoute: typeof SupportRouteRoute
+    }
+    '/owner/_portal/access': {
+      id: '/owner/_portal/access'
+      path: '/access'
+      fullPath: '/owner/access'
+      preLoaderRoute: typeof OwnerPortalAccessRouteImport
       parentRoute: typeof OwnerPortalRoute
     }
-    '/owner/_portal/bookings': {
-      id: '/owner/_portal/bookings'
-      path: '/bookings'
-      fullPath: '/owner/bookings'
-      preLoaderRoute: typeof OwnerPortalBookingsRouteImport
+    '/owner/_portal/analytics': {
+      id: '/owner/_portal/analytics'
+      path: '/analytics'
+      fullPath: '/owner/analytics'
+      preLoaderRoute: typeof OwnerPortalAnalyticsRouteImport
       parentRoute: typeof OwnerPortalRoute
     }
     '/owner/_portal/availability': {
@@ -827,12 +791,124 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerPortalAvailabilityRouteImport
       parentRoute: typeof OwnerPortalRoute
     }
-    '/owner/_portal/analytics': {
-      id: '/owner/_portal/analytics'
-      path: '/analytics'
-      fullPath: '/owner/analytics'
-      preLoaderRoute: typeof OwnerPortalAnalyticsRouteImport
+    '/owner/_portal/bookings': {
+      id: '/owner/_portal/bookings'
+      path: '/bookings'
+      fullPath: '/owner/bookings'
+      preLoaderRoute: typeof OwnerPortalBookingsRouteImport
       parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/dashboard': {
+      id: '/owner/_portal/dashboard'
+      path: '/dashboard'
+      fullPath: '/owner/dashboard'
+      preLoaderRoute: typeof OwnerPortalDashboardRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/disputes': {
+      id: '/owner/_portal/disputes'
+      path: '/disputes'
+      fullPath: '/owner/disputes'
+      preLoaderRoute: typeof OwnerPortalDisputesRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/notifications': {
+      id: '/owner/_portal/notifications'
+      path: '/notifications'
+      fullPath: '/owner/notifications'
+      preLoaderRoute: typeof OwnerPortalNotificationsRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/payouts': {
+      id: '/owner/_portal/payouts'
+      path: '/payouts'
+      fullPath: '/owner/payouts'
+      preLoaderRoute: typeof OwnerPortalPayoutsRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/reviews': {
+      id: '/owner/_portal/reviews'
+      path: '/reviews'
+      fullPath: '/owner/reviews'
+      preLoaderRoute: typeof OwnerPortalReviewsRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/rooms': {
+      id: '/owner/_portal/rooms'
+      path: '/rooms'
+      fullPath: '/owner/rooms'
+      preLoaderRoute: typeof OwnerPortalRoomsRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/settings': {
+      id: '/owner/_portal/settings'
+      path: '/settings'
+      fullPath: '/owner/settings'
+      preLoaderRoute: typeof OwnerPortalSettingsRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/status': {
+      id: '/owner/_portal/status'
+      path: '/status'
+      fullPath: '/owner/status'
+      preLoaderRoute: typeof OwnerPortalStatusRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/team': {
+      id: '/owner/_portal/team'
+      path: '/team'
+      fullPath: '/owner/team'
+      preLoaderRoute: typeof OwnerPortalTeamRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/onboarding/step1': {
+      id: '/owner/onboarding/step1'
+      path: '/step1'
+      fullPath: '/owner/onboarding/step1'
+      preLoaderRoute: typeof OwnerOnboardingStep1RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
+    }
+    '/owner/onboarding/step2': {
+      id: '/owner/onboarding/step2'
+      path: '/step2'
+      fullPath: '/owner/onboarding/step2'
+      preLoaderRoute: typeof OwnerOnboardingStep2RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
+    }
+    '/owner/onboarding/step3': {
+      id: '/owner/onboarding/step3'
+      path: '/step3'
+      fullPath: '/owner/onboarding/step3'
+      preLoaderRoute: typeof OwnerOnboardingStep3RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
+    }
+    '/owner/onboarding/step4': {
+      id: '/owner/onboarding/step4'
+      path: '/step4'
+      fullPath: '/owner/onboarding/step4'
+      preLoaderRoute: typeof OwnerOnboardingStep4RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
+    }
+    '/owner/onboarding/step5': {
+      id: '/owner/onboarding/step5'
+      path: '/step5'
+      fullPath: '/owner/onboarding/step5'
+      preLoaderRoute: typeof OwnerOnboardingStep5RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
+    }
+    '/owner/onboarding/step6': {
+      id: '/owner/onboarding/step6'
+      path: '/step6'
+      fullPath: '/owner/onboarding/step6'
+      preLoaderRoute: typeof OwnerOnboardingStep6RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
+    }
+    '/owner/onboarding/step7': {
+      id: '/owner/onboarding/step7'
+      path: '/step7'
+      fullPath: '/owner/onboarding/step7'
+      preLoaderRoute: typeof OwnerOnboardingStep7RouteImport
+      parentRoute: typeof OwnerOnboardingRouteRoute
     }
   }
 }
@@ -887,6 +963,7 @@ const OwnerOnboardingRouteRouteWithChildren =
   OwnerOnboardingRouteRoute._addFileChildren(OwnerOnboardingRouteRouteChildren)
 
 interface OwnerPortalRouteChildren {
+  OwnerPortalAccessRoute: typeof OwnerPortalAccessRoute
   OwnerPortalAnalyticsRoute: typeof OwnerPortalAnalyticsRoute
   OwnerPortalAvailabilityRoute: typeof OwnerPortalAvailabilityRoute
   OwnerPortalBookingsRoute: typeof OwnerPortalBookingsRoute
@@ -898,9 +975,11 @@ interface OwnerPortalRouteChildren {
   OwnerPortalRoomsRoute: typeof OwnerPortalRoomsRoute
   OwnerPortalSettingsRoute: typeof OwnerPortalSettingsRoute
   OwnerPortalStatusRoute: typeof OwnerPortalStatusRoute
+  OwnerPortalTeamRoute: typeof OwnerPortalTeamRoute
 }
 
 const OwnerPortalRouteChildren: OwnerPortalRouteChildren = {
+  OwnerPortalAccessRoute: OwnerPortalAccessRoute,
   OwnerPortalAnalyticsRoute: OwnerPortalAnalyticsRoute,
   OwnerPortalAvailabilityRoute: OwnerPortalAvailabilityRoute,
   OwnerPortalBookingsRoute: OwnerPortalBookingsRoute,
@@ -912,6 +991,7 @@ const OwnerPortalRouteChildren: OwnerPortalRouteChildren = {
   OwnerPortalRoomsRoute: OwnerPortalRoomsRoute,
   OwnerPortalSettingsRoute: OwnerPortalSettingsRoute,
   OwnerPortalStatusRoute: OwnerPortalStatusRoute,
+  OwnerPortalTeamRoute: OwnerPortalTeamRoute,
 }
 
 const OwnerPortalRouteWithChildren = OwnerPortalRoute._addFileChildren(
@@ -935,13 +1015,17 @@ const OwnerRouteRouteWithChildren = OwnerRouteRoute._addFileChildren(
 interface SuperAdminRouteRouteChildren {
   SuperAdminAdminsRoute: typeof SuperAdminAdminsRoute
   SuperAdminDashboardRoute: typeof SuperAdminDashboardRoute
+  SuperAdminPropertiesRoute: typeof SuperAdminPropertiesRoute
   SuperAdminSettingsRoute: typeof SuperAdminSettingsRoute
+  SuperAdminUsersRoute: typeof SuperAdminUsersRoute
 }
 
 const SuperAdminRouteRouteChildren: SuperAdminRouteRouteChildren = {
   SuperAdminAdminsRoute: SuperAdminAdminsRoute,
   SuperAdminDashboardRoute: SuperAdminDashboardRoute,
+  SuperAdminPropertiesRoute: SuperAdminPropertiesRoute,
   SuperAdminSettingsRoute: SuperAdminSettingsRoute,
+  SuperAdminUsersRoute: SuperAdminUsersRoute,
 }
 
 const SuperAdminRouteRouteWithChildren = SuperAdminRouteRoute._addFileChildren(

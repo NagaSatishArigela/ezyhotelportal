@@ -34,6 +34,8 @@ export interface OwnerBookingsResult {
 }
 
 export const ownerBookingsApi = {
+  checkIn: (id: string, qrCode: string) => api.post('/bookings/' + id + '/check-in', { qrCode }),
+  checkOut: (id: string) => api.post('/bookings/' + id + '/check-out'),
   list(propertyId: string, page = 1, limit = 20): Promise<OwnerBookingsResult> {
     return api
       .get<OwnerBookingsResult>(`/owner/properties/${propertyId}/bookings`, { params: { page, limit } })

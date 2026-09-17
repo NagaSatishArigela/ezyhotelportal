@@ -1,3 +1,6 @@
+import { api } from '@/lib/api'
+import { withMembership } from '@/lib/hotel-access'
+import type { HotelMembership } from '@/types'
 import { useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -68,23 +71,27 @@ export function SSOPage() {
         name: nameHint,
         email: em,
         phone: ph,
-        role: 'owner' as const,
+        role: 'applicant' as const,
         onboardingStatus: 'not_started' as const,
         onboardingStep: 1,
         avatarInitials: initials,
       }
 
-      setAuth(user, tokens.accessToken, false, tokens.refreshToken)
+      const headers = { Authorization: `Bearer ${tokens.accessToken}` }
+      const { data: profile } = await api.get<{ id: string; globalRole: string }>('/auth/me', { headers })
+      if (profile.id !== user.id || profile.globalRole !== 'USER') return fail()
+      const { data: memberships } = await api.get<HotelMembership[]>('/me/properties', { headers })
+      setAuth(withMembership(user, memberships.find(m => m.role && m.status === 'approved') ?? memberships[0], memberships), tokens.accessToken, false, tokens.refreshToken)
 
       // Fresh onboarding — reset any previous draft then pre-fill Step 1
       reset()
       saveStepData(1, { phone: ph, email: em })
 
       toast.success("Account created! Let's set up your property.")
-      navigate({ to: '/owner/onboarding/step1' })
+      navigate({ to: '/owner/access' })
     }
 
-    void run()
+    void run().catch(fail)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

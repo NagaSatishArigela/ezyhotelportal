@@ -10,12 +10,7 @@ export const Route = createFileRoute('/')({
     if (user.role === 'admin')   throw redirect({ to: '/admin/verification' })
     if (user.role === 'support') throw redirect({ to: '/support/dashboard' })
 
-    const s = user.onboardingStatus
-    if (s === 'approved') throw redirect({ to: '/owner/dashboard' })
-    if (s === 'submitted' || s === 'under_review' || s === 'revision_requested' || s === 'rejected' || s === 'suspended') {
-      throw redirect({ to: '/owner/status' })
-    }
-    throw redirect({ to: '/owner/onboarding/step1' })
+    throw redirect({ to: '/owner/access' })
   },
   component: () => null,
 })

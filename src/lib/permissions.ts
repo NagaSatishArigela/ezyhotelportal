@@ -1,6 +1,8 @@
 import type { Role, Permission } from '@/types'
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
+  applicant: ['view_onboarding', 'submit_onboarding', 'view_approval_status'],
+  hotel_admin: [], manager: [], staff: [],
   owner: [
     'view_onboarding',
     'submit_onboarding',

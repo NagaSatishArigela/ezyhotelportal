@@ -1,3 +1,4 @@
+import { apiMessage } from '@/lib/api/hotelTeam'
 import { useState, useEffect } from 'react'
 import {
   CalendarDays, IndianRupee, Star, TrendingUp, Wallet, BedDouble,
@@ -82,6 +83,11 @@ function MetricCard({ label, value, trend, icon: Icon }: { label: string; value:
 // ── Booking detail dialog (read-only) ──────────────────────────────────────
 
 function BookingDetailDialog({ booking, onClose }: { booking: OwnerBookingItem | null; onClose: () => void }) {
+  const { user } = useAuth()
+  const [qrCode, setQrCode] = useState('')
+  const qc = useQueryClient()
+  const canCheckIn = user?.permissions?.includes('check_in_out')
+  const action = useMutation({ mutationFn: (kind: 'in' | 'out') => kind === 'in' ? ownerBookingsApi.checkIn(booking!.id, qrCode) : ownerBookingsApi.checkOut(booking!.id), onSuccess: () => { void qc.invalidateQueries({ queryKey: ['owner-bookings'] }); void qc.invalidateQueries({ queryKey: ['owner-dashboard'] }); setQrCode(''); onClose(); toast.success('Booking updated') }, onError: e => toast.error(apiMessage(e)) })
   return (
     <Dialog open={!!booking} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
@@ -91,6 +97,8 @@ function BookingDetailDialog({ booking, onClose }: { booking: OwnerBookingItem |
         </DialogHeader>
         {booking && (
           <div className="space-y-4 mt-2">
+            {canCheckIn && booking.status === 'confirmed' && <div className="space-y-2"><Input aria-label="Guest QR code" placeholder="Enter code shown by the guest" value={qrCode} onChange={e => setQrCode(e.target.value)} /><Button disabled={!qrCode || action.isPending} onClick={() => action.mutate('in')}>Check in guest</Button></div>}
+            {canCheckIn && booking.status === 'checked_in' && <Button disabled={action.isPending} onClick={() => action.mutate('out')}>Check out guest</Button>}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><p className="text-navy-500 text-xs font-bold uppercase">Check-in</p><p className="font-semibold text-navy-900 mt-0.5">{fmtDateTime(booking.checkInAt)}</p></div>
               <div><p className="text-navy-500 text-xs font-bold uppercase">Check-out</p><p className="font-semibold text-navy-900 mt-0.5">{fmtDateTime(booking.checkOutAt)}</p></div>
