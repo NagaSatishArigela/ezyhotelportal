@@ -161,13 +161,24 @@ export function latestRevisionItems(revisionNotes: unknown): RevisionItem[] {
   )
 }
 
-/** Get the saved draft data for a property. */
-export async function getPropertyDraft(propertyId: string): Promise<{
+export interface DraftCompliance {
+  legalBusinessName: string
+  gstinMasked: string | null
+  panMasked: string
+  bankAccountNumberMasked: string
+  ifsc: string
+  accountHolderName: string
+  documents: { type: string; status: string; expiresAt: string | null }[]
+}
+export interface PropertyDraft {
   propertyId: string
   status: string
   draftStep: number | null
   draftData: Record<string, unknown>
-}> {
+  compliance: DraftCompliance | null
+}
+/** Get saved application data; compliance values remain masked. */
+export async function getPropertyDraft(propertyId: string): Promise<PropertyDraft> {
   const { data } = await api.get(`/properties/${propertyId}/draft`)
   return data
 }

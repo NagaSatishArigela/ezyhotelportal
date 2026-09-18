@@ -1,3 +1,5 @@
+import { SavedCompliance } from '@/components/owner/SavedCompliance'
+import { ensureApplicationDraft, submitApplication } from '@/lib/onboarding-session'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,7 +26,7 @@ import { cn, formatINR } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/onboarding.store'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import {
-  createPropertyDraft, saveOnboardingStep, submitOnboarding,
+  saveOnboardingStep,
   verifyIFSC, pennyDrop, uploadFile, verifyPincode,
 } from '@/lib/portal-api'
 import { completeServerSteps } from '@/lib/onboarding-mapping'
@@ -45,7 +47,6 @@ import { useNavigate } from '@tanstack/react-router'
 const lastSavedSignature = new Map<string, string>()
 
 function useOnboardingAutoSave(step: number, validate?: () => Promise<boolean>) {
-  const setDraftId      = useOnboardingStore((s) => s.setDraftId)
   const setOnBeforeNext = useOnboardingStore((s) => s.setOnBeforeNext)
 
   const saveFn = useCallback(async () => {
@@ -57,22 +58,19 @@ function useOnboardingAutoSave(step: number, validate?: () => Promise<boolean>) 
     const complete = completeServerSteps(stepData)
     if (complete.length === 0) return
 
-    let draftId = useOnboardingStore.getState().draftId
-    if (!draftId) {
-      draftId = await createPropertyDraft()
-      setDraftId(draftId)
-    }
+    const draftId = await ensureApplicationDraft()
     // Only PATCH steps whose payload actually changed since the last successful
     // save — flushing every complete step on each keystroke would trip the
     // backend's per-IP rate limit (429).
     for (const { step: serverStep, payload } of complete) {
+      if (serverStep === 5 && useOnboardingStore.getState().useSavedCompliance) continue
       const key = `${draftId}:${serverStep}`
       const sig = JSON.stringify(payload)
       if (lastSavedSignature.get(key) === sig) continue
       await saveOnboardingStep(draftId, serverStep, payload)
       lastSavedSignature.set(key, sig)
     }
-  }, [step, setDraftId])
+  }, [])
 
   const result = useAutoSave({ step, saveFn })
 
@@ -826,7 +824,7 @@ const roomSchema = z.object({
   type:         z.enum(['ac', 'nonac', 'dorm', 'suite']),
   count:        z.number().min(1, 'At least 1 room'),
   maxOccupancy: z.number().min(1).max(10),
-  bedType:      z.string().min(1, 'Select bed type'),
+  bedType:      z.string(), // Display-only value; the server does not persist bed type.
   sizeNote:     z.string().optional(),
   amenities:    z.array(z.string()),
   hourlyRate:   z.number().min(50).optional(),
@@ -1226,6 +1224,11 @@ const docsGateSchema = z
   .refine((docs) => docs.some((d) => d.type === 'fire_safety_cert'), 'Upload the fire safety certificate before continuing.')
 
 export function Step5Documents() {
+  const saved = useOnboardingStore(s => s.useSavedCompliance)
+  return saved ? <SavedCompliance /> : <DocumentsForm />
+}
+
+function DocumentsForm() {
   const draftId = useOnboardingStore((s) => s.draftId)
   const step1Data = useOnboardingStore((s) => s.stepData[1] as Partial<Step1Data> | undefined)
   const amenities = useOnboardingStore((s) => (s.stepData[2] as { amenities?: string[] } | undefined)?.amenities)
@@ -1341,6 +1344,11 @@ const step6Schema = z.object({
 type Step6Data = z.infer<typeof step6Schema>
 
 export function Step6BankAccount() {
+  const saved = useOnboardingStore(s => s.useSavedCompliance)
+  return saved ? <SavedCompliance /> : <BankForm />
+}
+
+function BankForm() {
   const stored = useOnboardingStore((s) => s.stepData[6] as Partial<Step6Data> | undefined)
   const { register, watch, setValue, trigger, formState: { errors } } = useForm<Step6Data>({
     resolver: zodResolver(step6Schema),
@@ -1536,6 +1544,7 @@ function describeSubmitError(data: SubmitErrorBody | undefined): string {
 
 export function Step7ReviewSubmit() {
   const stepData = useOnboardingStore((s) => s.stepData)
+  const savedCompliance = useOnboardingStore(s => s.useSavedCompliance ? s.savedCompliance : null)
   const s1 = stepData[1] as Partial<Step1Data> | undefined
   const s2 = stepData[2] as Partial<Step2Data> | undefined
   const s3 = stepData[3] as { photos?: Array<{ url?: string }> } | undefined
@@ -1577,15 +1586,15 @@ export function Step7ReviewSubmit() {
     },
     {
       step: 5, icon: FileText, label: 'Documents & KYC',
-      summary: s5?.documents?.length ? `${s5.documents.length} document${s5.documents.length > 1 ? 's' : ''} uploaded` : 'Not completed',
-      ok: !!s5?.documents?.some((document) => document.url),
+      summary: savedCompliance ? `${savedCompliance.documents.length} saved documents` : s5?.documents?.length ? `${s5.documents.length} document${s5.documents.length > 1 ? 's' : ''} uploaded` : 'Not completed',
+      ok: !!savedCompliance || !!s5?.documents?.some((document) => document.url),
     },
     {
       step: 6, icon: CreditCard, label: 'Bank & payouts',
-      summary: s6?.bankName
+      summary: savedCompliance ? `${savedCompliance.accountHolderName} - ${savedCompliance.bankAccountNumberMasked}` : s6?.bankName
         ? `${s6.accountHolderName} · ${s6.bankName} · ${s6.settlementPreference === 'd1' ? 'D+1 settlement' : 'Weekly settlement'}`
         : 'Not completed',
-      ok: !!(s6?.accountHolderName && s6?.bankName),
+      ok: !!savedCompliance || !!(s6?.accountHolderName && s6?.bankName),
     },
   ]
 
@@ -1597,14 +1606,15 @@ export function Step7ReviewSubmit() {
     const draftId = currentState.draftId
     if (!draftId) { toast.error('No draft found — please complete the onboarding steps first.'); return }
     const step5 = completeServerSteps(currentState.stepData).find(({ step }) => step === 5)
-    if (!step5) {
+    if (!step5 && !currentState.useSavedCompliance) {
       toast.error('Step 5 is incomplete. Please upload the required documents and complete the payout details.')
       return
     }
     setSubmitting(true)
     try {
-      await saveOnboardingStep(draftId, 5, step5.payload)
-      await submitOnboarding(draftId)
+      await useOnboardingStore.getState().onBeforeNext?.()
+      if (step5 && !currentState.useSavedCompliance) await saveOnboardingStep(draftId, 5, step5.payload)
+      await submitApplication()
       completeStep(7)
       toast.success('Application submitted! Verification takes 24 hours.')
       navigate({ to: '/owner/status' })
@@ -1657,7 +1667,7 @@ export function Step7ReviewSubmit() {
                 'flex items-start gap-3 rounded-[10px] border p-4 cursor-pointer hover:bg-navy-50 transition-colors',
                 ok ? 'border-success-200' : 'border-warning-400 bg-warning-50'
               )}
-              onClick={() => window.location.href = `/owner/onboarding/step${step}`}
+              onClick={() => navigate({ to: `/owner/onboarding/step${step}` })}
             >
               <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', ok ? 'bg-success-50 text-success-700' : 'bg-warning-50 text-warning-600')}>
                 {ok ? <CheckCircle size={18} /> : <Icon size={18} />}

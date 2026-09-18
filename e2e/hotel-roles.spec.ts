@@ -176,3 +176,29 @@ test('super admin can manage users, hotels and access approvals', async ({ page 
   await page.getByRole('link', { name: 'Property approvals', exact: true }).click()
   await expect(page).toHaveURL('/admin/verification')
 })
+
+
+test('a saved application restores property details and preserves masked compliance', async ({ page }) => {
+  await setup(page, [{ ...hotel, status: 'draft', role: null, roleName: null, permissions: [] }])
+  await page.route('**/api/properties/*/draft', route => route.fulfill({ json: {
+    propertyId: hotel.propertyId, status: 'draft', draftStep: 5,
+    draftData: {
+      step1: { propertyName: 'Restored hotel', propertyType: 'hotel', bookingPolicy: 'hourly', ownerFirstName: 'Tester', businessEntity: 'individual', category: 'mid' },
+      step2: { addressLine1: 'Saved street', city: 'Hyderabad', state: 'Telangana', pincode: '500001', latitude: 17, longitude: 78 },
+      step3: { rooms: [{ type: 'ac', count: 2, hourlyRate: 500, maxOccupancy: 2 }], amenities: ['wifi'], minBookingHours: '2' },
+      step4: { photos: [] },
+    },
+    compliance: { legalBusinessName: 'Saved business', gstinMasked: null, panMasked: '****1234F', bankAccountNumberMasked: '****6789', ifsc: 'HDFC0000123', accountHolderName: 'Tester', documents: [{ type: 'fire_safety_cert', status: 'pending', expiresAt: null }] },
+  } }))
+  await page.getByRole('button', { name: 'Open hotel' }).click()
+  await page.getByRole('button', { name: /Step 2/ }).click()
+  await expect(page.locator('input[name="propertyName"]')).toHaveValue('Restored hotel')
+  await page.getByRole('button', { name: 'Save & exit' }).click()
+  await page.getByRole('button', { name: /Step 5/ }).click()
+  await expect(page.getByRole('heading', { name: 'Saved legal and payout details' })).toBeVisible()
+  await expect(page.getByText('****1234F', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: /Continue/ }).click()
+  await expect(page).toHaveURL('/owner/onboarding/step6')
+  await expect(page.getByRole('heading', { name: 'Saved legal and payout details' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Team & roles' })).toHaveCount(0)
+})

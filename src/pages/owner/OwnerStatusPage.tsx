@@ -57,16 +57,21 @@ export function OwnerStatusPage() {
       setRevisionLoaded(true)
       return
     }
+    let active = true
+    setRevisionLoaded(false)
+    setRevisionItems([])
     getPropertyStatus(propertyId)
       .then((res) => {
+        if (!active) return
         if (res.timeline) setLiveTimeline(res.timeline)
         setRevisionItems(latestRevisionItems(res.revisionNotes))
       })
       .catch(() => {
         /* use static fallback */
       })
-      .finally(() => setRevisionLoaded(true))
-  }, [propertyId])
+      .finally(() => { if (active) setRevisionLoaded(true) })
+    return () => { active = false }
+  }, [propertyId, onboardingStatus])
   void liveTimeline // used by timeline renders below
 
   const firstIncompleteStep =
@@ -205,12 +210,12 @@ export function OwnerStatusPage() {
               <div className="flex-1">
                 <p className="font-semibold text-navy-900 text-sm">Media & gallery</p>
                 <p className="text-xs text-navy-500 mt-0.5">
-                  Add better photos anytime — helps the admin see your property clearly.
+                  Photo changes are locked during review — helps the admin see your property clearly.
                 </p>
               </div>
               <Button
                 size="sm"
-                onClick={() => navigate({ to: '/owner/onboarding/step3' as never })}
+                disabled
               >
                 Update photos
               </Button>

@@ -93,3 +93,12 @@ describe('property-scoped access', () => {
     expect(useOnboardingStore.getState().draftId).toBe('hotel-2')
   })
 })
+
+it.each(['not_started', 'in_progress', 'revision_requested'] as const)('allows applicant onboarding for %s without granting operations', (onboardingStatus) => {
+  const applicant = { ...user, onboardingStatus }
+  expect(canAccessHotelRoute(applicant, '/owner/onboarding/step2')).toBe(true)
+  expect(canAccessHotelRoute(applicant, '/owner/bookings')).toBe(false)
+})
+it.each(['submitted', 'approved', 'rejected'] as const)('locks onboarding for %s', (onboardingStatus) => {
+  expect(canAccessHotelRoute({ ...user, onboardingStatus }, '/owner/onboarding/step2')).toBe(false)
+})
