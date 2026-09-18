@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { useOnboardingStore } from '@/store/onboarding.store'
 import { api } from '@/lib/api'
 import type { HotelMembership } from '@/types'
 import { canAccessHotelRoute, withMembership } from '@/lib/hotel-access'
@@ -22,6 +23,9 @@ export function HotelAccessSync() {
       data.find((m) => m.propertyId === user.propertyId),
       data
     )
+    if (next.onboardingStatus === 'revision_requested' && user.onboardingStatus !== next.onboardingStatus) {
+      useOnboardingStore.setState({ restoredDraftId: null })
+    }
     if (JSON.stringify(next) !== JSON.stringify(user)) setUser(next)
     if (!canAccessHotelRoute(next, pathname)) void navigate({ to: '/owner/access' })
   }, [data, user, pathname, navigate, setUser])

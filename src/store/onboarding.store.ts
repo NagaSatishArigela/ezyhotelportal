@@ -1,9 +1,15 @@
+import type { DraftCompliance } from '@/lib/portal-api'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface OnboardingState {
+  selectionVersion: number
+  restoredDraftId: string | null
+  savedCompliance: DraftCompliance | null
+  useSavedCompliance: boolean
+  editCompliance: () => void
   ownerId: string | null
   bindOwner: (ownerId: string, propertyId?: string) => void
   currentStep: number
@@ -34,6 +40,10 @@ interface OnboardingState {
 }
 
 const initialState = {
+  selectionVersion: 0,
+  restoredDraftId: null,
+  savedCompliance: null as DraftCompliance | null,
+  useSavedCompliance: false,
   ownerId: null,
   currentStep: 1,
   completedSteps: [],
@@ -48,13 +58,14 @@ export const useOnboardingStore = create<OnboardingState>()(
     (set) => ({
       ...initialState,
       onBeforeNext: null,
+      editCompliance: () => set({ useSavedCompliance: false }),
       bindOwner: (ownerId, propertyId) => set((state) => {
         const sameOwner = state.ownerId === ownerId
         const matchingProperty = !!propertyId && state.draftId === propertyId
         // Legacy drafts can only be retained when the server confirms their property.
         if ((sameOwner || state.ownerId === null) && matchingProperty) return { ownerId }
         if (sameOwner && !propertyId && !state.draftId) return { ownerId }
-        return { ...initialState, ownerId, draftId: propertyId ?? null, onBeforeNext: null }
+        return { ...initialState, selectionVersion: state.selectionVersion + 1, ownerId, draftId: propertyId ?? null, onBeforeNext: null }
       }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
@@ -70,7 +81,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       saveStepData: (step, data) =>
         set((s) => ({ stepData: { ...s.stepData, [step]: data } })),
       setOnBeforeNext: (fn) => set({ onBeforeNext: fn }),
-      reset: () => set(initialState),
+      reset: () => set(state => ({ ...initialState, selectionVersion: state.selectionVersion + 1, onBeforeNext: null })),
     }),
     {
       name: 'stayflex-onboarding',
@@ -78,6 +89,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       // onBeforeNext is a function — not serialisable, must not be persisted
       partialize: (state) => ({
         ownerId: state.ownerId,
+        savedCompliance: state.savedCompliance,
+        useSavedCompliance: state.useSavedCompliance,
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
         draftId: state.draftId,

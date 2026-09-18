@@ -48,6 +48,10 @@ export function withMembership(
 }
 export function canAccessHotelRoute(user: User | null, route: string): boolean {
   if (!user) return false
+  if (route === '/owner/onboarding' || route.startsWith('/owner/onboarding/')) {
+    return (user.role === 'applicant' || user.role === 'owner') &&
+      ['not_started', 'in_progress', 'revision_requested'].includes(user.onboardingStatus ?? '')
+  }
   const page = route.split('/').filter(Boolean).pop() ?? ''
   if (page === 'access') return true
   if (page === 'status') return user.role === 'owner' || user.role === 'applicant'

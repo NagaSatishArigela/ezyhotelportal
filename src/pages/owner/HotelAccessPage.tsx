@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { restoreApplication } from '@/lib/onboarding-session'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from '@/lib/api'
@@ -16,7 +18,9 @@ export function HotelAccessPage() {
     queryFn: async () => (await api.get<HotelMembership[]>('/me/properties')).data,
     refetchInterval: 15000,
   })
-  const open = (m: HotelMembership) => {
+  const [opening, setOpening] = useState(false)
+  const [openError, setOpenError] = useState('')
+  const open = async (m: HotelMembership) => {
     if (!user) return
     useOnboardingStore.getState().bindOwner(user.id, m.isApplicant ? m.propertyId : undefined)
     setUser(withMembership(user, m, data))
@@ -26,8 +30,13 @@ export function HotelAccessPage() {
       )?.[0]
       if (page) void navigate({ to: '/owner/' + page })
     } else if (m.isApplicant) {
-      useOnboardingStore.getState().setDraftId(m.propertyId)
-      void navigate({ to: '/owner/status' })
+      setOpening(true)
+      setOpenError('')
+      try {
+        if (['draft', 'needs_revision'].includes(m.status)) await restoreApplication(m.propertyId)
+        void navigate({ to: '/owner/status' })
+      } catch { setOpenError('Unable to restore this application. Please open it again to retry.') }
+      finally { setOpening(false) }
     }
   }
   return (
@@ -37,6 +46,7 @@ export function HotelAccessPage() {
         Hotel operations become available after platform approval. Your customer account remains
         unchanged.
       </p>
+      {openError && <p role="alert">{openError}</p>}
       {isLoading && <p>Loading hotels...</p>}
       {isError && <p role="alert">Unable to load your memberships. Please retry.</p>}
       {data?.map((m) => (
@@ -51,7 +61,7 @@ export function HotelAccessPage() {
                 : 'Access suspended'}
           </p>
           <Button
-            disabled={!m.isApplicant && (m.status !== 'approved' || !m.permissions.length)}
+            disabled={opening || (!m.isApplicant && (m.status !== 'approved' || !m.permissions.length))}
             onClick={() => open(m)}
           >
             Open hotel
@@ -60,6 +70,7 @@ export function HotelAccessPage() {
       ))}
       {data?.length === 0 && <p>You do not have a hotel membership or application yet.</p>}
       <Button
+        disabled={opening}
         onClick={() => {
           if (!user) return
           useOnboardingStore.getState().reset()

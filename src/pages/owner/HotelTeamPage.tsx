@@ -59,6 +59,15 @@ export function HotelTeamPage({ propertyId: explicitId }: { propertyId?: string 
         register a customer account.
       </p>
       <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="font-semibold">Add staff in two steps</h2>
+        <ol className="list-decimal pl-5 space-y-2">
+          <li>The staff member creates their own account on EzyHotels Web, using their own phone and email.</li>
+          <li>Enter that registered email below and assign a role for this hotel. They can then sign in to the portal and select this hotel.</li>
+        </ol>
+        <a className="text-primary-600 underline" href={`${(import.meta.env.VITE_WEB_URL ?? 'http://localhost:3001').replace(/\/$/, '')}/register`} target="_blank" rel="noopener noreferrer">Open staff registration</a>
+        <p>Each person uses their own login. This form assigns hotel access; it does not create an account or send an invitation. Only the owner and platform administrators can manage team access.</p>
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
         <h2 className="font-semibold">Assign or change a member</h2>
         <form
           className="flex flex-wrap gap-3"
