@@ -747,10 +747,10 @@ export function Step3Policies() {
                 </div>
 
                 {catPhotos.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 mt-3">
                     {catPhotos.map((p) => (
-                      <div key={p.id} className="relative group aspect-[4/3] overflow-hidden rounded-[8px] border border-border">
-                        <button type="button" className="w-full h-full" disabled={busy !== null} aria-label={`Replace ${label} photo`}
+                      <div key={p.id} className="relative group min-w-0 overflow-hidden rounded-[8px] border border-border">
+                        <button type="button" className="block aspect-[4/3] w-full" disabled={busy !== null} aria-label={`Replace ${label} photo`}
                           onClick={() => { replacement.current = p; replacementInput.current?.click() }}>
                           <PhotoTile src={localPhotos.current[p.id] || p.url} alt={label} className="w-full h-full" />
                         </button>
@@ -759,13 +759,13 @@ export function Step3Policies() {
                             <Star size={9} className="fill-white" /> Cover
                           </span>
                         )}
-                        <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1 bg-white/90">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border p-2 bg-white">
                           <FilePreview src={localPhotos.current[p.id] || p.url} name={`${label} photo`} />
                           {!p.isPrimary && (
                             <button
                               type="button"
                               onClick={() => setCover(p.id)}
-                              className="rounded-[6px] bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-navy-700 hover:bg-white"
+                              className="whitespace-nowrap rounded-[6px] bg-navy-50 px-2 py-1 text-xs font-semibold text-navy-700 hover:bg-white"
                             >
                               Set cover
                             </button>

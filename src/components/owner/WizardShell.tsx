@@ -97,9 +97,9 @@ export function WizardShell({
   const handleNext = onNext ?? defaultNext
 
   return (
-    <div className="flex h-screen overflow-hidden bg-navy-50">
+    <div className="fixed inset-0 flex h-dvh overflow-hidden bg-navy-50">
       <aside className="hidden lg:flex w-80 shrink-0 flex-col bg-white border-r border-border">
-        <div className="flex h-16 items-center gap-2 px-7 border-b border-border">
+        <div className="flex h-16 shrink-0 items-center gap-2 px-7 border-b border-border">
           <EzyMark size={30} className="shrink-0" />
           <div>
             <EzyWordmark className="font-display font-bold text-base" />
@@ -107,7 +107,7 @@ export function WizardShell({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto thin-scroll px-7 pt-7 pb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto thin-scroll px-7 pt-7 pb-4">
           <p className="text-[11px] text-navy-400 uppercase font-bold tracking-[0.6px] mb-2">
             List your property
           </p>
@@ -120,7 +120,7 @@ export function WizardShell({
           <StepProgress steps={WIZARD_STEPS} currentStep={activeStep} completedSteps={completedSteps} />
         </div>
 
-        <div className="px-7 py-5 border-t border-border">
+        <div className="shrink-0 px-7 py-5 border-t border-border">
           <div className="flex items-center gap-2 mb-1">
             <Shield size={14} className="text-navy-500" aria-hidden />
             <span className="text-sm font-semibold text-navy-700">Need help?</span>
@@ -134,7 +134,7 @@ export function WizardShell({
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-16 shrink-0 items-center justify-between bg-white border-b border-border px-6">
           <div className="flex items-center gap-3">
             <span className="lg:hidden text-sm font-semibold text-navy-700">
@@ -175,20 +175,20 @@ export function WizardShell({
           </DropdownMenu>
         </header>
 
-        <main className="flex-1 overflow-y-auto thin-scroll">
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain thin-scroll">
           <div className="max-w-[920px] mx-auto px-6 lg:px-12 pt-8 pb-4">
             {children}
           </div>
         </main>
 
         {!hideFooter && (
-          <div className="shrink-0 bg-white border-t border-border px-6 lg:px-12 py-[18px] flex items-center gap-3">
+          <div className="shrink-0 bg-white border-t border-border px-3 sm:px-6 lg:px-12 py-[18px] flex flex-wrap items-center gap-2 sm:gap-3">
             {handleBack ? (
               <Button variant="secondary" onClick={handleBack} type="button">{backLabel}</Button>
             ) : (
               <div className="w-24" />
             )}
-            <span className="text-xs text-navy-400">Step {activeStep} of {WIZARD_STEPS.length}</span>
+            <span className="hidden sm:inline text-xs text-navy-400">Step {activeStep} of {WIZARD_STEPS.length}</span>
             <div className="flex-1" />
             <Button variant="outline" type="button" onClick={() => navigate({ to: "/owner/status" })}>
               Save & exit
