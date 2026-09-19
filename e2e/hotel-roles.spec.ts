@@ -193,6 +193,16 @@ test('a saved application restores property details and preserves masked complia
   await page.getByRole('button', { name: 'Open hotel' }).click()
   await page.getByRole('button', { name: /Step 2/ }).click()
   await expect(page.locator('input[name="propertyName"]')).toHaveValue('Restored hotel')
+  for (const width of [1900, 390]) {
+    await page.setViewportSize({ width, height: 850 })
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true)
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await expect(page.getByRole('button', { name: 'Save & exit' })).toBeInViewport()
+    await page.locator('main').evaluate(el => { el.scrollTop = el.scrollHeight })
+    await expect(page.getByRole('button', { name: 'Save & exit' })).toBeInViewport()
+  }
+  await page.setViewportSize({ width: 1280, height: 850 })
+
   await page.getByRole('button', { name: 'Save & exit' }).click()
   await page.getByRole('button', { name: /Step 5/ }).click()
   await expect(page.getByRole('heading', { name: 'Saved legal and payout details' })).toBeVisible()
