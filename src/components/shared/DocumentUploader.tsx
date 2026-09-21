@@ -1,3 +1,4 @@
+import { privateDocumentPath } from '@/lib/private-document'
 import { useEffect, useRef, useState } from 'react'
 import { Upload, FileText } from 'lucide-react'
 import { FilePreview } from './FilePreview'
@@ -59,7 +60,7 @@ export function DocumentUploader({ label, hint, why, required = true, accept = D
       onClick={() => inputRef.current?.click()}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) void handleFile(file) }}>
-      {src && !isPdf ? <img src={src} alt={name} className="h-24 w-full object-contain" /> : src ? <FileText size={24} /> : <Upload size={24} />}
+      {src && !isPdf && !privateDocumentPath(src) ? <img src={src} alt={name} className="h-24 w-full object-contain" /> : src ? <FileText size={24} /> : <Upload size={24} />}
       <span className="max-w-full truncate text-sm">{busy ? 'Uploading...' : name || 'Click or drag to upload'}</span>
       <span className="text-xs text-navy-400">{src ? 'Click to replace file' : `${accept} - Max ${maxSizeMB}MB`}</span>
     </button>

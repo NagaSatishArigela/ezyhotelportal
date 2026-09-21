@@ -1,3 +1,4 @@
+import { VerifyEmail } from '@/components/owner/VerifyEmail'
 import { useState } from 'react'
 import { restoreApplication } from '@/lib/onboarding-session'
 import { useQuery } from '@tanstack/react-query'
@@ -46,6 +47,7 @@ export function HotelAccessPage() {
         Hotel operations become available after platform approval. Your customer account remains
         unchanged.
       </p>
+      <VerifyEmail />
       {openError && <p role="alert">{openError}</p>}
       {isLoading && <p>Loading hotels...</p>}
       {isError && <p role="alert">Unable to load your memberships. Please retry.</p>}

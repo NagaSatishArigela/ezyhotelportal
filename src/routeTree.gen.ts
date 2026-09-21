@@ -28,10 +28,16 @@ import { Route as AdminVerificationRouteImport } from './routes/admin/verificati
 import { Route as OwnerPortalRouteImport } from './routes/owner/_portal'
 import { Route as OwnerOnboardingRouteRouteImport } from './routes/owner/onboarding/route'
 import { Route as SuperAdminAdminsRouteImport } from './routes/super-admin/admins'
+import { Route as SuperAdminBookingsRouteImport } from './routes/super-admin/bookings'
 import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
+import { Route as SuperAdminDisputesRouteImport } from './routes/super-admin/disputes'
+import { Route as SuperAdminPayoutsRouteImport } from './routes/super-admin/payouts'
 import { Route as SuperAdminPropertiesRouteImport } from './routes/super-admin/properties'
+import { Route as SuperAdminReviewsRouteImport } from './routes/super-admin/reviews'
 import { Route as SuperAdminSettingsRouteImport } from './routes/super-admin/settings'
+import { Route as SuperAdminTicketsRouteImport } from './routes/super-admin/tickets'
 import { Route as SuperAdminUsersRouteImport } from './routes/super-admin/users'
+import { Route as SuperAdminVerificationRouteImport } from './routes/super-admin/verification'
 import { Route as SupportDashboardRouteImport } from './routes/support/dashboard'
 import { Route as SupportTicketsRouteImport } from './routes/support/tickets'
 import { Route as SupportUsersRouteImport } from './routes/support/users'
@@ -150,9 +156,24 @@ const SuperAdminAdminsRoute = SuperAdminAdminsRouteImport.update({
   path: '/admins',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
+const SuperAdminBookingsRoute = SuperAdminBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
 const SuperAdminDashboardRoute = SuperAdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminDisputesRoute = SuperAdminDisputesRouteImport.update({
+  id: '/disputes',
+  path: '/disputes',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminPayoutsRoute = SuperAdminPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
 const SuperAdminPropertiesRoute = SuperAdminPropertiesRouteImport.update({
@@ -160,14 +181,29 @@ const SuperAdminPropertiesRoute = SuperAdminPropertiesRouteImport.update({
   path: '/properties',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
+const SuperAdminReviewsRoute = SuperAdminReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
 const SuperAdminSettingsRoute = SuperAdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
+const SuperAdminTicketsRoute = SuperAdminTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
 const SuperAdminUsersRoute = SuperAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminVerificationRoute = SuperAdminVerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
 const SupportDashboardRoute = SupportDashboardRouteImport.update({
@@ -306,10 +342,16 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/super-admin/admins': typeof SuperAdminAdminsRoute
+  '/super-admin/bookings': typeof SuperAdminBookingsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/disputes': typeof SuperAdminDisputesRoute
+  '/super-admin/payouts': typeof SuperAdminPayoutsRoute
   '/super-admin/properties': typeof SuperAdminPropertiesRoute
+  '/super-admin/reviews': typeof SuperAdminReviewsRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/tickets': typeof SuperAdminTicketsRoute
   '/super-admin/users': typeof SuperAdminUsersRoute
+  '/super-admin/verification': typeof SuperAdminVerificationRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
@@ -353,10 +395,16 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/super-admin/admins': typeof SuperAdminAdminsRoute
+  '/super-admin/bookings': typeof SuperAdminBookingsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/disputes': typeof SuperAdminDisputesRoute
+  '/super-admin/payouts': typeof SuperAdminPayoutsRoute
   '/super-admin/properties': typeof SuperAdminPropertiesRoute
+  '/super-admin/reviews': typeof SuperAdminReviewsRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/tickets': typeof SuperAdminTicketsRoute
   '/super-admin/users': typeof SuperAdminUsersRoute
+  '/super-admin/verification': typeof SuperAdminVerificationRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
@@ -402,10 +450,16 @@ export interface FileRoutesById {
   '/admin/verification': typeof AdminVerificationRoute
   '/owner/_portal': typeof OwnerPortalRouteWithChildren
   '/super-admin/admins': typeof SuperAdminAdminsRoute
+  '/super-admin/bookings': typeof SuperAdminBookingsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/disputes': typeof SuperAdminDisputesRoute
+  '/super-admin/payouts': typeof SuperAdminPayoutsRoute
   '/super-admin/properties': typeof SuperAdminPropertiesRoute
+  '/super-admin/reviews': typeof SuperAdminReviewsRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/tickets': typeof SuperAdminTicketsRoute
   '/super-admin/users': typeof SuperAdminUsersRoute
+  '/super-admin/verification': typeof SuperAdminVerificationRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
@@ -451,10 +505,16 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/super-admin/admins'
+    | '/super-admin/bookings'
     | '/super-admin/dashboard'
+    | '/super-admin/disputes'
+    | '/super-admin/payouts'
     | '/super-admin/properties'
+    | '/super-admin/reviews'
     | '/super-admin/settings'
+    | '/super-admin/tickets'
     | '/super-admin/users'
+    | '/super-admin/verification'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
@@ -498,10 +558,16 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/super-admin/admins'
+    | '/super-admin/bookings'
     | '/super-admin/dashboard'
+    | '/super-admin/disputes'
+    | '/super-admin/payouts'
     | '/super-admin/properties'
+    | '/super-admin/reviews'
     | '/super-admin/settings'
+    | '/super-admin/tickets'
     | '/super-admin/users'
+    | '/super-admin/verification'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
@@ -546,10 +612,16 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/owner/_portal'
     | '/super-admin/admins'
+    | '/super-admin/bookings'
     | '/super-admin/dashboard'
+    | '/super-admin/disputes'
+    | '/super-admin/payouts'
     | '/super-admin/properties'
+    | '/super-admin/reviews'
     | '/super-admin/settings'
+    | '/super-admin/tickets'
     | '/super-admin/users'
+    | '/super-admin/verification'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
@@ -721,11 +793,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminAdminsRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
+    '/super-admin/bookings': {
+      id: '/super-admin/bookings'
+      path: '/bookings'
+      fullPath: '/super-admin/bookings'
+      preLoaderRoute: typeof SuperAdminBookingsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
     '/super-admin/dashboard': {
       id: '/super-admin/dashboard'
       path: '/dashboard'
       fullPath: '/super-admin/dashboard'
       preLoaderRoute: typeof SuperAdminDashboardRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/disputes': {
+      id: '/super-admin/disputes'
+      path: '/disputes'
+      fullPath: '/super-admin/disputes'
+      preLoaderRoute: typeof SuperAdminDisputesRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/payouts': {
+      id: '/super-admin/payouts'
+      path: '/payouts'
+      fullPath: '/super-admin/payouts'
+      preLoaderRoute: typeof SuperAdminPayoutsRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
     '/super-admin/properties': {
@@ -735,6 +828,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminPropertiesRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
+    '/super-admin/reviews': {
+      id: '/super-admin/reviews'
+      path: '/reviews'
+      fullPath: '/super-admin/reviews'
+      preLoaderRoute: typeof SuperAdminReviewsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
     '/super-admin/settings': {
       id: '/super-admin/settings'
       path: '/settings'
@@ -742,11 +842,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminSettingsRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
+    '/super-admin/tickets': {
+      id: '/super-admin/tickets'
+      path: '/tickets'
+      fullPath: '/super-admin/tickets'
+      preLoaderRoute: typeof SuperAdminTicketsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
     '/super-admin/users': {
       id: '/super-admin/users'
       path: '/users'
       fullPath: '/super-admin/users'
       preLoaderRoute: typeof SuperAdminUsersRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/verification': {
+      id: '/super-admin/verification'
+      path: '/verification'
+      fullPath: '/super-admin/verification'
+      preLoaderRoute: typeof SuperAdminVerificationRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
     '/support/dashboard': {
@@ -1014,18 +1128,30 @@ const OwnerRouteRouteWithChildren = OwnerRouteRoute._addFileChildren(
 
 interface SuperAdminRouteRouteChildren {
   SuperAdminAdminsRoute: typeof SuperAdminAdminsRoute
+  SuperAdminBookingsRoute: typeof SuperAdminBookingsRoute
   SuperAdminDashboardRoute: typeof SuperAdminDashboardRoute
+  SuperAdminDisputesRoute: typeof SuperAdminDisputesRoute
+  SuperAdminPayoutsRoute: typeof SuperAdminPayoutsRoute
   SuperAdminPropertiesRoute: typeof SuperAdminPropertiesRoute
+  SuperAdminReviewsRoute: typeof SuperAdminReviewsRoute
   SuperAdminSettingsRoute: typeof SuperAdminSettingsRoute
+  SuperAdminTicketsRoute: typeof SuperAdminTicketsRoute
   SuperAdminUsersRoute: typeof SuperAdminUsersRoute
+  SuperAdminVerificationRoute: typeof SuperAdminVerificationRoute
 }
 
 const SuperAdminRouteRouteChildren: SuperAdminRouteRouteChildren = {
   SuperAdminAdminsRoute: SuperAdminAdminsRoute,
+  SuperAdminBookingsRoute: SuperAdminBookingsRoute,
   SuperAdminDashboardRoute: SuperAdminDashboardRoute,
+  SuperAdminDisputesRoute: SuperAdminDisputesRoute,
+  SuperAdminPayoutsRoute: SuperAdminPayoutsRoute,
   SuperAdminPropertiesRoute: SuperAdminPropertiesRoute,
+  SuperAdminReviewsRoute: SuperAdminReviewsRoute,
   SuperAdminSettingsRoute: SuperAdminSettingsRoute,
+  SuperAdminTicketsRoute: SuperAdminTicketsRoute,
   SuperAdminUsersRoute: SuperAdminUsersRoute,
+  SuperAdminVerificationRoute: SuperAdminVerificationRoute,
 }
 
 const SuperAdminRouteRouteWithChildren = SuperAdminRouteRoute._addFileChildren(

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/auth.store'
 import { getRouteApi } from '@tanstack/react-router'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { useForm } from 'react-hook-form'
@@ -32,7 +33,10 @@ import {
 import { AnomalyDetailDrawer, AnomaliesTabBadge, AnomaliesView } from './AdminAnomaliesView'
 import { AdminDisputesView, DisputeDetailDrawer, DisputesTabBadge } from './AdminDisputesView'
 
-const routeApi = getRouteApi('/admin/bookings')
+function useBookingsRouteApi() {
+  const role = useAuthStore((state) => state.user?.role)
+  return getRouteApi(role === 'super_admin' ? '/super-admin/bookings' : '/admin/bookings')
+}
 
 const PAGE_LIMIT = 50
 
@@ -206,7 +210,7 @@ function StatusMultiSelect({ value, onChange }: { value: BookingStatus[]; onChan
 }
 
 function FilterBar({ search }: { search: AdminBookingsSearch }) {
-  const navigate = routeApi.useNavigate()
+  const navigate = useBookingsRouteApi().useNavigate()
 
   const [bookingRef, setBookingRef] = useState(search.bookingRef ?? '')
   const [guestPhone, setGuestPhone] = useState(search.guestPhone ?? '')
@@ -368,7 +372,7 @@ function SortableHeader({ field, label, search, onSort }: {
 }
 
 function BookingsTable({ search, onSelect }: { search: AdminBookingsSearch; onSelect: (id: string) => void }) {
-  const navigate = routeApi.useNavigate()
+  const navigate = useBookingsRouteApi().useNavigate()
   const page = search.page ?? 1
 
   const { data, isLoading } = useQuery({
@@ -980,8 +984,8 @@ function BookingDetailDrawer({ bookingId, onClose }: { bookingId: string; onClos
 // ---------------------------------------------------------------------------
 
 export function AdminBookingsPage() {
-  const search = routeApi.useSearch()
-  const navigate = routeApi.useNavigate()
+  const search = useBookingsRouteApi().useSearch()
+  const navigate = useBookingsRouteApi().useNavigate()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedAnomalyId, setSelectedAnomalyId] = useState<string | null>(null)
   const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null)
