@@ -78,10 +78,10 @@ describe('property-scoped access', () => {
       renderHook(() => useHasAnyPermission(['manage_rooms', 'manage_staff'])).result.current
     ).toBe(false)
   })
-  it('allows super admin into platform admin and support routes', () => {
+  it('keeps super admin in its own workspace with platform permissions', () => {
     useAuthStore.getState().setAuth({ ...user, role: 'super_admin' }, 'token')
-    expect(() => requireAuth('admin')).not.toThrow()
-    expect(() => requireAuth('support')).not.toThrow()
+    expect(() => requireAuth('admin')).toThrow()
+    expect(() => requireAuth('support')).toThrow()
     expect(renderHook(() => usePermission('approve_property')).result.current).toBe(true)
   })
   it('clears draft data when selecting another property', () => {
@@ -101,4 +101,12 @@ it.each(['not_started', 'in_progress', 'revision_requested'] as const)('allows a
 })
 it.each(['submitted', 'approved', 'rejected'] as const)('locks onboarding for %s', (onboardingStatus) => {
   expect(canAccessHotelRoute({ ...user, onboardingStatus }, '/owner/onboarding/step2')).toBe(false)
+})
+
+it.each(['admin', 'support', 'super_admin'] as const)('isolates the %s workspace', (role) => {
+  useAuthStore.getState().setAuth({ ...user, role }, 'token')
+  for (const workspace of ['admin', 'support', 'super_admin', 'owner'] as const) {
+    if (workspace === role) expect(() => requireAuth(workspace)).not.toThrow()
+    else expect(() => requireAuth(workspace)).toThrow()
+  }
 })

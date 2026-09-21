@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw'
 // ── Auth ────────────────────────────────────────────────────────────────────
 
 export const handlers = [
+  http.post('/api/auth/logout', () => HttpResponse.json({ message: 'Logged out successfully' })),
   http.post('/api/auth/login', async ({ request }) => {
     const { email } = await request.json() as { email: string; password: string }
     const users: Record<string, object> = {

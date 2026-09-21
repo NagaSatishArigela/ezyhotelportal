@@ -86,14 +86,24 @@ export const useAuthStore = create<AuthState>()(
             : null,
         })),
 
-      logout: () =>
+      logout: () => {
+        const refreshToken = get().refreshToken
+        if (refreshToken) {
+          void fetch((import.meta.env.VITE_API_URL ?? '/api') + '/auth/logout', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }), keepalive: true,
+          }).catch(() => { /* Local cleanup must still complete when offline. */ })
+        }
+        useOnboardingStore.getState().reset()
+        useOnboardingStore.persist.clearStorage()
         set({
           user: null,
           token: null,
           refreshToken: null,
           isAuthenticated: false,
           rememberMe: false,
-        }),
+        })
+      },
 
       checkTokenExpiry: () => {
         const { token, logout } = get()

@@ -1,3 +1,4 @@
+import { FilePreview } from '@/components/shared/FilePreview'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -214,9 +215,9 @@ function PropertyDetailDialog({ propertyId, onClose }: { propertyId: string; onC
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {compliance.documents.map((doc) => (
-                    <Badge key={doc.type} variant={doc.status === 'verified' ? 'green' : doc.status === 'rejected' ? 'red' : 'amber'}>
+                    <span key={doc.type} className="inline-flex items-center gap-2"><Badge variant={doc.status === 'verified' ? 'green' : doc.status === 'rejected' ? 'red' : 'amber'}>
                       {doc.type.replace(/_/g, ' ')} · {doc.status}
-                    </Badge>
+                    </Badge><FilePreview src={doc.url} name={doc.type.replace(/_/g, " ")} isPdf={/\.pdf$/i.test(doc.url)} /></span>
                   ))}
                 </div>
               </div>

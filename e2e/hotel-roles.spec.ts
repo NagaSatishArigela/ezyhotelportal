@@ -174,7 +174,7 @@ test('super admin can manage users, hotels and access approvals', async ({ page 
     .poll(() => requests.find((r) => r.path.endsWith('/status') && r.method === 'PATCH')?.body)
     .toEqual({ suspended: true })
   await page.getByRole('link', { name: 'Property approvals', exact: true }).click()
-  await expect(page).toHaveURL('/admin/verification')
+  await expect(page).toHaveURL('/super-admin/verification')
 })
 
 
@@ -211,4 +211,30 @@ test('a saved application restores property details and preserves masked complia
   await expect(page).toHaveURL('/owner/onboarding/step6')
   await expect(page.getByRole('heading', { name: 'Saved legal and payout details' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Team & roles' })).toHaveCount(0)
+})
+
+
+test('staff can verify their account email before owner assignment', async ({ page }) => {
+  await setup(page, [])
+  await page.route('**/api/auth/email-verification/request', route => route.fulfill({ json: { verified: false, expiresIn: 900 } }))
+  await page.route('**/api/auth/email-verification/confirm', route => route.fulfill({ json: { verified: true } }))
+  await page.getByRole('button', { name: 'Send verification email' }).click()
+  await expect(page.getByRole('status')).toContainText('Check your email')
+  await page.getByRole('textbox', { name: 'Email verification code' }).fill('a'.repeat(64))
+  await page.getByRole('button', { name: 'Verify email', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Email verified')
+  await expect(page.getByRole('link', { name: 'Team & roles' })).toHaveCount(0)
+})
+
+test('super admin management stays in the super admin workspace', async ({ page }) => {
+  await setup(page, [], 'SUPER_ADMIN')
+  await expect(page).toHaveURL('/super-admin/dashboard')
+  await page.getByRole('link', { name: 'Support tickets', exact: true }).click()
+  await expect(page).toHaveURL('/super-admin/tickets')
+  await expect(page.getByTestId('super-admin-shell')).toBeVisible()
+  await expect(page.getByText('Back to platform dashboard')).toHaveCount(0)
+  await page.evaluate(() => { history.pushState({}, '', '/support/tickets'); dispatchEvent(new PopStateEvent('popstate')) })
+  await expect(page).toHaveURL('/super-admin/dashboard')
+  await page.evaluate(() => { history.pushState({}, '', '/admin/verification'); dispatchEvent(new PopStateEvent('popstate')) })
+  await expect(page).toHaveURL('/super-admin/dashboard')
 })

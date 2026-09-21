@@ -19,8 +19,7 @@ export function requireAuth(role?: Role) {
   if (
     role &&
     user.role !== role &&
-    !(role === 'owner' && hotelRoles.includes(user.role)) &&
-    !(user.role === 'super_admin' && (role === 'admin' || role === 'support'))
+    !(role === 'owner' && hotelRoles.includes(user.role))
   ) {
     throw redirect({ to: '/login' })
   }

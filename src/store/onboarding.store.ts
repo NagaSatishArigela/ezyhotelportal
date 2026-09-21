@@ -53,6 +53,29 @@ const initialState = {
   stepData: {},
 }
 
+function safePersistedOnboarding(value: string): string {
+  const parsed = JSON.parse(value)
+  const state = parsed.state ?? {}
+  // Resume non-sensitive property details only; legal, payout and identity inputs stay in memory.
+  const steps = state.stepData ?? {}
+  parsed.state = {
+    ownerId: state.ownerId, draftId: state.draftId,
+    currentStep: state.currentStep, completedSteps: state.completedSteps,
+    stepData: Object.fromEntries([2, 3, 4].filter(k => steps[k]).map(k => [k, steps[k]])),
+  }
+  return JSON.stringify(parsed)
+}
+const safeOnboardingStorage = {
+  getItem(name: string) {
+    const raw = localStorage.getItem(name)
+    if (!raw) return null
+    try { const safe = safePersistedOnboarding(raw); localStorage.setItem(name, safe); return safe }
+    catch { localStorage.removeItem(name); return null }
+  },
+  setItem(name: string, value: string) { localStorage.setItem(name, safePersistedOnboarding(value)) },
+  removeItem(name: string) { localStorage.removeItem(name) },
+}
+
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
@@ -85,7 +108,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'stayflex-onboarding',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => safeOnboardingStorage),
       // onBeforeNext is a function — not serialisable, must not be persisted
       partialize: (state) => ({
         ownerId: state.ownerId,

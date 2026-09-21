@@ -111,11 +111,6 @@ export function SupportShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <main className="flex-1 overflow-y-auto thin-scroll p-6">
-          {user?.role === 'super_admin' && (
-            <Link to="/super-admin/dashboard" className="block mb-4 text-primary-600">
-              Back to platform dashboard
-            </Link>
-          )}
           {children}
         </main>
       </div>
