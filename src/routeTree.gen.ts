@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ListPropertyRouteImport } from './routes/list-property'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OwnerRouteRouteImport } from './routes/owner/route'
 import { Route as SsoRouteImport } from './routes/sso'
@@ -75,6 +76,11 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListPropertyRoute = ListPropertyRouteImport.update({
+  id: '/list-property',
+  path: '/list-property',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/list-property': typeof ListPropertyRoute
   '/login': typeof LoginRoute
   '/sso': typeof SsoRoute
   '/owner/onboarding': typeof OwnerOnboardingRouteRouteWithChildren
@@ -383,6 +390,7 @@ export interface FileRoutesByTo {
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/list-property': typeof ListPropertyRoute
   '/login': typeof LoginRoute
   '/sso': typeof SsoRoute
   '/owner/onboarding': typeof OwnerOnboardingRouteRouteWithChildren
@@ -437,6 +445,7 @@ export interface FileRoutesById {
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/list-property': typeof ListPropertyRoute
   '/login': typeof LoginRoute
   '/sso': typeof SsoRoute
   '/owner/onboarding': typeof OwnerOnboardingRouteRouteWithChildren
@@ -493,6 +502,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/forgot-password'
+    | '/list-property'
     | '/login'
     | '/sso'
     | '/owner/onboarding'
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/forgot-password'
+    | '/list-property'
     | '/login'
     | '/sso'
     | '/owner/onboarding'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/forgot-password'
+    | '/list-property'
     | '/login'
     | '/sso'
     | '/owner/onboarding'
@@ -654,6 +666,7 @@ export interface RootRouteChildren {
   SuperAdminRouteRoute: typeof SuperAdminRouteRouteWithChildren
   SupportRouteRoute: typeof SupportRouteRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  ListPropertyRoute: typeof ListPropertyRoute
   LoginRoute: typeof LoginRoute
   SsoRoute: typeof SsoRoute
 }
@@ -679,6 +692,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/list-property': {
+      id: '/list-property'
+      path: '/list-property'
+      fullPath: '/list-property'
+      preLoaderRoute: typeof ListPropertyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1181,6 +1201,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperAdminRouteRoute: SuperAdminRouteRouteWithChildren,
   SupportRouteRoute: SupportRouteRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  ListPropertyRoute: ListPropertyRoute,
   LoginRoute: LoginRoute,
   SsoRoute: SsoRoute,
 }
