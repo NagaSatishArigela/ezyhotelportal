@@ -57,7 +57,7 @@ const BRAND_FEATURES = [
   { icon: Shield, text: 'RBI-compliant KYC & secure payouts' },
 ]
 
-export function LoginPage() {
+export function LoginPage({ listingProperty = false }: { listingProperty?: boolean }) {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [showPwd, setShowPwd] = useState(false)
@@ -98,7 +98,7 @@ export function LoginPage() {
       if (user.role === 'admin') return navigate({ to: '/admin/verification' })
       if (user.role === 'support') return navigate({ to: '/support/dashboard' })
 
-      navigate({ to: '/owner/access' })
+      navigate({ to: listingProperty ? '/list-property' : '/owner/access' })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed')
       setApiError(true)
@@ -125,7 +125,7 @@ export function LoginPage() {
           </div>
 
           <h1 className="font-display font-bold text-[26px] text-navy-900 mb-1">Welcome back</h1>
-          <p className="text-sm text-navy-500 mb-7">Sign in to manage your property</p>
+          <p className="text-sm text-navy-500 mb-7">{listingProperty ? 'Sign in to start or continue listing your property' : 'Sign in to manage your property'}</p>
 
           {/* Form */}
           <form

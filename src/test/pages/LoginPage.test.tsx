@@ -128,6 +128,19 @@ describe('LoginPage', () => {
     })
   })
 
+  it('continues to onboarding after login from the listing entry', async () => {
+    const user = userEvent.setup()
+    vi.mocked(portalApi.portalLogin).mockResolvedValueOnce({
+      user: { id: 'u1', name: 'Applicant', email: 'owner@demo.com', phone: '', role: 'applicant', avatarInitials: 'A' },
+      token: 'mock.token', refreshToken: 'mock.refresh',
+    })
+    render(<LoginPage listingProperty />)
+    await user.type(screen.getByTestId('email-input'), 'owner@demo.com')
+    await user.type(screen.getByTestId('password-input'), 'demo1234')
+    await user.click(screen.getByTestId('login-button'))
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith({ to: '/list-property' }))
+  })
+
   it('navigates to admin on admin login', async () => {
     const user = userEvent.setup()
     vi.spyOn(portalApi, 'portalLogin').mockResolvedValueOnce({
