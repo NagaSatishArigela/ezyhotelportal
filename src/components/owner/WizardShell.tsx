@@ -176,7 +176,7 @@ export function WizardShell({
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain thin-scroll">
-          <div className="max-w-[920px] mx-auto px-6 lg:px-12 pt-8 pb-4">
+          <div className="max-w-[920px] mx-auto px-6 lg:px-12 pt-8 pb-10">
             {children}
           </div>
         </main>
