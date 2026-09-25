@@ -72,7 +72,11 @@ const safeOnboardingStorage = {
     try { const safe = safePersistedOnboarding(raw); localStorage.setItem(name, safe); return safe }
     catch { localStorage.removeItem(name); return null }
   },
-  setItem(name: string, value: string) { localStorage.setItem(name, safePersistedOnboarding(value)) },
+  setItem(name: string, value: string) {
+    // Keep the live draft and server autosave working when browser storage is full.
+    try { localStorage.setItem(name, safePersistedOnboarding(value)) }
+    catch { /* Browser persistence is best-effort. */ }
+  },
   removeItem(name: string) { localStorage.removeItem(name) },
 }
 

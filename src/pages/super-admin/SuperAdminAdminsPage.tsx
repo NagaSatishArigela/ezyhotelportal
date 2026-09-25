@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
+import { apiMessage } from '@/lib/api/hotelTeam'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,9 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { FieldWrapper } from '@/components/shared/FieldWrapper'
 
 const createSchema = z.object({
-  name: z.string().min(2, 'At least 2 characters').max(120),
-  phone: z.string().regex(/^\d{10}$/, 'Exactly 10 digits'),
-  email: z.string().email('Valid email required').optional().or(z.literal('')),
+  name: z.string().trim().min(2, 'At least 2 characters').max(120),
+  phone: z.string().trim().regex(/^\d{10}$/, 'Exactly 10 digits'),
+  email: z.string().trim().toLowerCase().email('Valid email required'),
 })
 type CreateForm = z.infer<typeof createSchema>
 
@@ -39,6 +41,7 @@ function StatusBadge({ status }: { status: AdminUser['status'] }) {
 export function SuperAdminAdminsPage() {
   const [page] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
+  const [createError, setCreateError] = useState('')
   const { user: currentUser } = useAuth()
   const qc = useQueryClient()
 
@@ -52,14 +55,14 @@ export function SuperAdminAdminsPage() {
       superAdminApi.createAdmin({
         name: payload.name,
         phone: payload.phone,
-        email: payload.email || undefined,
+        email: payload.email,
       }),
     onSuccess: () => {
       toast.success('Admin account created')
       setCreateOpen(false)
       qc.invalidateQueries({ queryKey: ['super-admin-admins'] })
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to create admin'),
+    onError: (err: Error) => { const message = apiMessage(err); setCreateError(message); toast.error(message) },
   })
 
   const toggleStatus = useMutation({
@@ -76,7 +79,7 @@ export function SuperAdminAdminsPage() {
     resolver: zodResolver(createSchema),
   })
 
-  const onSubmit = (data: CreateForm) => create.mutate(data)
+  const onSubmit = (data: CreateForm) => { setCreateError(''); create.mutate(data) }
 
   const isSelf = (id: string) => id === currentUser?.id
 
@@ -87,7 +90,7 @@ export function SuperAdminAdminsPage() {
           <h1 className="font-display text-2xl font-bold text-navy-900">Admin Users</h1>
           <p className="mt-1 text-sm text-navy-500">Manage admin and super admin accounts</p>
         </div>
-        <Button size="sm" onClick={() => { reset(); setCreateOpen(true) }} data-testid="create-admin-btn">
+        <Button size="sm" onClick={() => { reset(); setCreateError(''); setCreateOpen(true) }} data-testid="create-admin-btn">
           <Plus size={14} aria-hidden /> Create admin
         </Button>
       </div>
@@ -177,9 +180,11 @@ export function SuperAdminAdminsPage() {
             <FieldWrapper label="Phone (10 digits)" error={errors.phone?.message} required>
               <Input {...register('phone')} placeholder="9988776655" data-testid="phone-input" />
             </FieldWrapper>
-            <FieldWrapper label="Email (optional)" error={errors.email?.message}>
+            <FieldWrapper label="Email" required error={errors.email?.message}>
               <Input {...register('email')} type="email" placeholder="admin@ezyhotels.com" data-testid="email-input" />
             </FieldWrapper>
+            {createError && <p role="alert" className="text-sm text-error-600">{createError}</p>}
+            <p className="text-sm text-navy-600">Already registered? <Link to="/super-admin/users" className="text-primary-700 underline">Manage the existing user</Link> and explicitly change their platform role to Admin.</p>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={create.isPending} data-testid="confirm-create-btn">
