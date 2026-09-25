@@ -1,4 +1,5 @@
 import { SavedCompliance } from '@/components/owner/SavedCompliance'
+import { documentRequirements, type DocumentType } from '@/lib/document-requirements'
 import { ensureApplicationDraft, submitApplication } from '@/lib/onboarding-session'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
@@ -21,7 +22,7 @@ import { DocumentUploader } from '@/components/shared/DocumentUploader'
 import { FilePreview } from '@/components/shared/FilePreview'
 import { PHOTO_ACCEPT, validateUpload } from '@/lib/upload-validation'
 import { uploadErrorMessage } from '@/lib/upload-error'
-import { PhotoTile } from '@/components/shared/PhotoTile'
+import { UploadedPhoto } from '@/components/shared/UploadedPhoto'
 import { cn, formatINR } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/onboarding.store'
 import { useAutoSave } from '@/hooks/useAutoSave'
@@ -639,6 +640,7 @@ export function Step3Policies() {
     let uploadedCount = 0
     try {
       for (const file of accepted) {
+        try {
         const issue = validateUpload(file, PHOTO_ACCEPT)
         if (issue) { toast.error(`${file.name}: ${issue}`); continue }
         if (!draftId) throw new Error('Create the property draft before uploading photos')
@@ -659,10 +661,11 @@ export function Step3Policies() {
             },
           ]
         })
+        } catch (error) {
+          toast.error(`${file.name}: ${uploadErrorMessage(error)}`)
+        }
       }
       if (uploadedCount) toast.success(`${uploadedCount} photo(s) uploaded`)
-    } catch (error) {
-      toast.error(uploadErrorMessage(error))
     } finally {
       uploadBusy.current = false
       setBusy(null)
@@ -750,10 +753,9 @@ export function Step3Policies() {
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 mt-3">
                     {catPhotos.map((p) => (
                       <div key={p.id} className="relative group min-w-0 overflow-hidden rounded-[8px] border border-border">
-                        <button type="button" className="block aspect-[4/3] w-full" disabled={busy !== null} aria-label={`Replace ${label} photo`}
-                          onClick={() => { replacement.current = p; replacementInput.current?.click() }}>
-                          <PhotoTile src={localPhotos.current[p.id] || p.url} alt={label} className="w-full h-full" />
-                        </button>
+                        <div className="aspect-[4/3] w-full bg-navy-50">
+                          <UploadedPhoto src={localPhotos.current[p.id] || p.url} alt={label} className="w-full h-full object-cover" />
+                        </div>
                         {p.isPrimary && (
                           <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-[6px] bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                             <Star size={9} className="fill-white" /> Cover
@@ -761,6 +763,7 @@ export function Step3Policies() {
                         )}
                         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border p-2 bg-white">
                           <FilePreview src={localPhotos.current[p.id] || p.url} name={`${label} photo`} />
+                          <button type="button" className="text-xs text-primary-700 underline" disabled={busy !== null} aria-label={`Replace ${label} photo`} onClick={() => { replacement.current = p; replacementInput.current?.click() }}>Replace</button>
                           {!p.isPrimary && (
                             <button
                               type="button"
@@ -1199,24 +1202,7 @@ export function Step4LegalTax() {
 // ── Step 5 — Documents & KYC ────────────────────────────────────────────────
 
 // Contract §3 DocumentType values used by the portal doc lanes.
-type DocumentType =
-  | 'pan_card' | 'id_proof' | 'rental_agreement' | 'cancelled_cheque'
-  | 'gstin_certificate' | 'fire_safety_cert' | 'fssai_license' | 'trade_license'
-  | 'partnership_deed' | 'llp_agreement' | 'incorporation_certificate'
-  | 'board_resolution'
-
-interface DocDef {
-  id: string          // portal docId (UI key)
-  type: DocumentType  // contract §3 DocumentType
-  label: string
-  required: boolean
-  show: boolean
-}
-
 interface DocValue { type: DocumentType; url: string }
-
-// Amenity ids that trigger the FSSAI requirement (contract §2 REQUIRES_FSSAI).
-const FSSAI_AMENITIES = new Set(['restaurant', 'bar', 'room_service'])
 
 // Minimal gate: fire_safety_cert must be present before Continue.
 const docsGateSchema = z
@@ -1235,28 +1221,13 @@ function DocumentsForm() {
   const entity = step1Data?.businessEntity ?? 'individual'
   const hasGST = !!(step1Data?.gstNumber)
   const isCompany = entity !== 'individual' && entity !== 'sole_proprietor'
-  const needsFssai = Array.isArray(amenities) && amenities.some((a) => FSSAI_AMENITIES.has(a))
 
   // docId → uploaded url. Restored from persisted stepData on reload.
   const stored = useOnboardingStore((s) => s.stepData[5] as { docUrls?: Record<string, string> } | undefined)
   const [urls, setUrls] = useState<Record<string, string>>(stored?.docUrls ?? {})
   const pendingUploads = useRef(new Set<string>())
 
-  const ALL_DOCS: DocDef[] = [
-    { id: 'pan',       type: 'pan_card',                  label: 'PAN card',                   required: true,      show: true },
-    { id: 'aadhaar',   type: 'id_proof',                  label: 'Aadhaar / ID proof',         required: !isCompany, show: !isCompany },
-    { id: 'ownership', type: 'rental_agreement',          label: 'Property ownership / lease', required: true,      show: true },
-    { id: 'cheque',    type: 'cancelled_cheque',          label: 'Cancelled cheque',           required: true,      show: true },
-    { id: 'gst_cert',  type: 'gstin_certificate',         label: 'GST certificate',            required: hasGST,    show: hasGST },
-    { id: 'fire_noc',  type: 'fire_safety_cert',          label: 'Fire safety certificate',    required: true,      show: true },
-    { id: 'fssai',     type: 'fssai_license',             label: 'FSSAI license',              required: needsFssai, show: needsFssai },
-    { id: 'trade',     type: 'trade_license',             label: 'Trade license',              required: false,     show: isCompany },
-    { id: 'partnership_deed',          type: 'partnership_deed',          label: 'Partnership deed',            required: true, show: entity === 'partnership' },
-    { id: 'llp_agreement',             type: 'llp_agreement',             label: 'LLP agreement',               required: true, show: entity === 'llp' },
-    { id: 'incorporation_certificate', type: 'incorporation_certificate', label: 'Certificate of incorporation', required: true, show: entity === 'llp' || entity === 'private_limited' || entity === 'public_limited' },
-    { id: 'director',                  type: 'board_resolution',          label: 'Board resolution',            required: true, show: entity === 'private_limited' || entity === 'public_limited' },
-  ]
-  const DOCS = ALL_DOCS.filter((d) => d.show)
+  const DOCS = documentRequirements(entity, hasGST, amenities)
 
   // Server-ready documents array (docId already resolved to DocumentType).
   const documents: DocValue[] = DOCS.filter((d) => urls[d.id]).map((d) => ({ type: d.type, url: urls[d.id] }))
@@ -1372,20 +1343,27 @@ function BankForm() {
 
   const [ifscStatus, setIfscStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [bankBranch, setBankBranch] = useState('')
+  const [ifscError, setIfscError] = useState('')
+  const ifscRequest = useRef(0)
   const [pennyStatus, setPennyStatus] = useState<'idle' | 'loading' | 'ok'>('idle')
 
   const lookupIFSC = async () => {
-    const code = watch('ifscCode').toUpperCase()
-    if (!code.match(/^[A-Z]{4}0[A-Z0-9]{6}$/)) return
+    const request = ++ifscRequest.current
+    const code = watch('ifscCode').trim().toUpperCase()
+    setValue('ifscCode', code, { shouldValidate: true })
+    setBankBranch('')
+    if (!code.match(/^[A-Z]{4}0[A-Z0-9]{6}$/)) { setIfscStatus('idle'); return }
     setIfscStatus('loading')
     try {
       const res = await verifyIFSC(code)
-      setValue('bankName', res.bank)
+      if (request !== ifscRequest.current || watch('ifscCode') !== code) return
+      setValue('bankName', res.bank, { shouldValidate: true })
       setBankBranch(`${res.branch}, ${res.city}`)
       setIfscStatus('ok')
-    } catch {
+    } catch (error) {
+      if (request !== ifscRequest.current || watch('ifscCode') !== code) return
       setIfscStatus('error')
-      setValue('bankName', '')
+      setIfscError(error instanceof Error ? error.message : 'IFSC lookup is unavailable. Enter the bank name manually.')
     }
   }
 
@@ -1434,18 +1412,21 @@ function BankForm() {
             <FieldWrapper label="IFSC code" required error={errors.ifscCode?.message}>
               <div className="flex gap-2">
                 <Input
-                  {...register('ifscCode')}
+                  {...register('ifscCode', {
+                    setValueAs: (value: string) => value.trim().toUpperCase(),
+                    onChange: () => { ifscRequest.current++; setIfscStatus('idle'); setBankBranch(''); setValue('bankName', '') },
+                    onBlur: lookupIFSC,
+                  })}
                   className="font-mono uppercase"
                   placeholder="HDFC0001234"
                   error={!!errors.ifscCode}
-                  onBlur={lookupIFSC}
                 />
                 <Button type="button" variant="outline" size="sm" onClick={lookupIFSC} disabled={ifscStatus === 'loading'}>
                   {ifscStatus === 'loading' ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                 </Button>
               </div>
               {ifscStatus === 'ok' && <p className="text-xs text-success-700 mt-1">✓ {bankBranch}</p>}
-              {ifscStatus === 'error' && <p className="text-xs text-error-500 mt-1">IFSC not found. Try HDFC0001234, SBIN0001234, or ICIC0001234</p>}
+              {ifscStatus === 'error' && <p role="alert" className="text-xs text-error-500 mt-1">{ifscError}</p>}
             </FieldWrapper>
 
             <FieldWrapper label="Bank name" required error={errors.bankName?.message}>

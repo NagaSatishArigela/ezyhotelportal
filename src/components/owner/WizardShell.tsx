@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ListingChecklist } from './ListingChecklist'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useShallow } from 'zustand/react/shallow'
 import { Shield, LogOut } from 'lucide-react'
@@ -178,6 +179,10 @@ export function WizardShell({
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain thin-scroll">
           <div className="max-w-[920px] mx-auto px-6 lg:px-12 pt-8 pb-10">
             {children}
+            <details className="mt-8 rounded-xl border border-orange-200 bg-white p-4">
+              <summary className="cursor-pointer font-semibold text-primary-700">Documents checklist</summary>
+              <div className="mt-4"><ListingChecklist /></div>
+            </details>
           </div>
         </main>
 

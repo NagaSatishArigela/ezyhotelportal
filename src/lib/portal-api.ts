@@ -185,21 +185,21 @@ export async function getPropertyDraft(propertyId: string): Promise<PropertyDraf
 
 // ── Thin wrappers kept for backward compat with ownerApi mock call sites ─────
 
-/** IFSC lookup — kept as mock until a real IFSC provider is configured. */
+/** Real branch lookup through Razorpay's public IFSC directory. */
 export async function verifyIFSC(
   ifsc: string
 ): Promise<{ bank: string; branch: string; city: string }> {
-  const MOCK: Record<string, { bank: string; branch: string; city: string }> = {
-    HDFC0001234: { bank: 'HDFC Bank', branch: 'Connaught Place', city: 'New Delhi' },
-    SBIN0001234: { bank: 'State Bank of India', branch: 'MG Road', city: 'Bengaluru' },
-    ICIC0001234: { bank: 'ICICI Bank', branch: 'Bandra West', city: 'Mumbai' },
-    AXIS0001234: { bank: 'Axis Bank', branch: 'Bandra', city: 'Mumbai' },
-    KOTK0001234: { bank: 'Kotak Mahindra Bank', branch: 'Lower Parel', city: 'Mumbai' },
-  }
-  await new Promise((r) => setTimeout(r, 700))
-  const result = MOCK[ifsc.toUpperCase()]
-  if (!result) throw new Error('Invalid IFSC code. Try HDFC0001234, SBIN0001234, or ICIC0001234.')
-  return result
+  const code = ifsc.trim().toUpperCase()
+  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(code)) throw new Error('Enter a valid 11-character IFSC code.')
+  const unavailable = 'IFSC lookup is unavailable. Try again or enter the bank name manually.'
+  const response = await fetch(`https://ifsc.razorpay.com/${code}`, {
+    signal: AbortSignal.timeout(10000), credentials: 'omit',
+  }).catch(() => { throw new Error(unavailable) })
+  if (response.status === 404) throw new Error('IFSC not found. Check the code with your bank.')
+  if (!response.ok) throw new Error(unavailable)
+  const data = await response.json().catch(() => { throw new Error(unavailable) })
+  if (typeof data?.BANK !== 'string' || !data.BANK || typeof data.BRANCH !== 'string' || typeof data.CITY !== 'string') throw new Error(unavailable)
+  return { bank: data.BANK, branch: data.BRANCH, city: data.CITY }
 }
 
 /** Penny drop — kept as mock until a real banking API is configured. */
