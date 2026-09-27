@@ -1,83 +1,48 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
 import { decodeToken } from '@/lib/token'
+import { refreshSession } from '@/lib/refresh-session'
 
-const WARNING_THRESHOLD_SEC = 60
-
-/**
- * Drives the session-expiry countdown modal. When the countdown reaches 0 the
- * session is over: `onExpire` fires exactly once so the caller can log the user
- * out and redirect to /login (otherwise the modal would just vanish, leaving an
- * authenticated-looking UI backed by a dead token).
- */
 export function useSessionExpiry(onExpire?: () => void) {
-  const token = useAuthStore((s) => s.token)
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const token = useAuthStore(s => s.token)
+  const authenticated = useAuthStore(s => s.isAuthenticated)
   const [showWarning, setShowWarning] = useState(false)
-  const [secondsLeft, setSecondsLeft] = useState(WARNING_THRESHOLD_SEC)
-  const [expired, setExpired] = useState(false)
-
-  // Keep the latest callback without re-arming the timers when it changes.
-  const onExpireRef = useRef(onExpire)
-  onExpireRef.current = onExpire
-
+  const [secondsLeft, setSecondsLeft] = useState(60)
+  const callback = useRef(onExpire)
+  callback.current = onExpire
   useEffect(() => {
     setShowWarning(false)
-    setExpired(false)
-
-    if (!isAuthenticated || !token) return
-
+    if (!authenticated || !token) return
     const payload = decodeToken(token)
     if (!payload) return
-
-    const expiresInSec = payload.exp - Date.now() / 1000
-    if (expiresInSec <= 0) return
-
-    // Use a local object so cleanup captures the same reference across both timers
-    const ids: {
-      warning?: ReturnType<typeof setTimeout>
-      countdown?: ReturnType<typeof setInterval>
-    } = {}
-
-    const startCountdown = (initial: number) => {
-      setSecondsLeft(initial)
-      setShowWarning(true)
-      ids.countdown = setInterval(() => {
-        setSecondsLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(ids.countdown)
-            setShowWarning(false)
-            setExpired(true)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
+    let active = true
+    let retryAt = 0
+    let refreshing = false
+    let notified = false
+    const expire = () => { if (!notified) { notified = true; callback.current?.() } }
+    const tick = async () => {
+      const remaining = Math.max(0, Math.ceil(payload.exp - Date.now() / 1000))
+      setSecondsLeft(remaining)
+      if (remaining > 60 || refreshing || Date.now() < retryAt) return
+      if (!useAuthStore.getState().refreshToken) {
+        setShowWarning(true)
+        if (!remaining) expire()
+        return
+      }
+      refreshing = true
+      try { await refreshSession(); if (active) setShowWarning(false) }
+      catch {
+        if (!active) return
+        if (!useAuthStore.getState().isAuthenticated) expire()
+        else { setShowWarning(true); retryAt = Date.now() + 15000 }
+      } finally { refreshing = false }
     }
-
-    if (expiresInSec <= WARNING_THRESHOLD_SEC) {
-      // Already inside the warning window — show immediately
-      startCountdown(Math.floor(expiresInSec))
-    } else {
-      ids.warning = setTimeout(
-        () => startCountdown(WARNING_THRESHOLD_SEC),
-        (expiresInSec - WARNING_THRESHOLD_SEC) * 1000,
-      )
-    }
-
-    return () => {
-      clearTimeout(ids.warning)
-      clearInterval(ids.countdown)
-    }
-  }, [token, isAuthenticated])
-
-  // Fire the expiry callback once, in an effect (not inside the setState updater
-  // which can run twice under StrictMode).
-  useEffect(() => {
-    if (expired) onExpireRef.current?.()
-  }, [expired])
-
-  const dismiss = () => setShowWarning(false)
-
-  return { showWarning, secondsLeft, dismiss }
+    const resume = () => { void tick() }
+    void tick()
+    const timer = setInterval(resume, 1000)
+    window.addEventListener('focus', resume)
+    window.addEventListener('online', resume)
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', resume); window.removeEventListener('online', resume) }
+  }, [token, authenticated])
+  return { showWarning, secondsLeft, dismiss: () => setShowWarning(false) }
 }

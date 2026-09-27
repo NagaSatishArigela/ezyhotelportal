@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Circle,
-  Camera,
   Lock,
   AlertTriangle,
   RefreshCw,
@@ -195,36 +194,18 @@ export function OwnerStatusPage() {
         {/* What's editable */}
         <div className="rounded-(--radius-lg) border border-border bg-white shadow-1 overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
-            <p className="font-semibold text-navy-900">What you can update during review</p>
+            <p className="font-semibold text-navy-900">Application sections during review</p>
             <p className="text-xs text-navy-500 mt-0.5">
-              Some sections are locked to protect the integrity of your KYC verification.
+              All sections are locked to protect the integrity of your application and KYC verification.
             </p>
           </div>
 
           <div className="divide-y divide-border">
-            {/* Photos — EDITABLE */}
-            <div className="flex items-center gap-4 px-5 py-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-success-50 text-success-700 shrink-0">
-                <Camera size={18} />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-navy-900 text-sm">Media & gallery</p>
-                <p className="text-xs text-navy-500 mt-0.5">
-                  Photo changes are locked during review — helps the admin see your property clearly.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                disabled
-              >
-                Update photos
-              </Button>
-            </div>
-
-            {/* All other steps — LOCKED */}
+            {/* All application sections are locked during review. */}
             {[
               { label: 'Owner identity & business details', step: 1 },
               { label: 'Property info, amenities & pricing policy', step: 2 },
+              { label: 'Media & gallery', step: 3 },
               { label: 'Rooms & pricing', step: 4 },
               { label: 'Documents & KYC', step: 5 },
               { label: 'Bank & payouts', step: 6 },

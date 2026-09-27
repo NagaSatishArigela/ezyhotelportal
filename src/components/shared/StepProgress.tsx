@@ -26,13 +26,14 @@ export function StepProgress({ steps, currentStep, completedSteps }: StepProgres
             const isPending   = !isCompleted && !isCurrent
 
             return (
-              <div key={step.number} className="flex gap-[14px] relative pb-[18px] items-start">
+              <div key={step.number} aria-current={isCurrent ? 'step' : undefined} data-step={step.number} data-completed={isCompleted} className="flex gap-[14px] relative pb-[18px] items-start">
                 {/* Circle — 28x28, design spec */}
                 <div className={cn(
                   "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold z-10 transition-colors",
                   isCompleted && "bg-primary-600 text-white",
                   // current: white bg + amber border (design spec — unfilled)
-                  isCurrent  && "bg-white border-2 border-primary-600 text-primary-600",
+                  isCurrent && !isCompleted && "bg-white border-2 border-primary-600 text-primary-600",
+                  isCurrent && isCompleted && "ring-2 ring-primary-200 ring-offset-2",
                   isPending  && "bg-navy-100 text-navy-400",
                 )}>
                   {isCompleted ? <Check size={14} strokeWidth={3} aria-hidden /> : step.number}
@@ -47,6 +48,7 @@ export function StepProgress({ steps, currentStep, completedSteps }: StepProgres
                     isPending   && "font-semibold text-navy-400",
                   )}>
                     {step.label}
+                    <span className="sr-only">{isCompleted ? ' — Completed' : isCurrent ? ' — Current step' : ' — Not completed'}</span>
                   </p>
                   {step.sublabel && (
                     <p className="text-[12px] text-navy-400 mt-0.5">{step.sublabel}</p>

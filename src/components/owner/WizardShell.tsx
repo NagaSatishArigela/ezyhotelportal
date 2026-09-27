@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { ListingChecklist } from './ListingChecklist'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useShallow } from 'zustand/react/shallow'
 import { Shield, LogOut } from 'lucide-react'
@@ -98,8 +97,8 @@ export function WizardShell({
   const handleNext = onNext ?? defaultNext
 
   return (
-    <div className="fixed inset-0 flex h-dvh overflow-hidden bg-navy-50">
-      <aside className="hidden lg:flex w-80 shrink-0 flex-col bg-white border-r border-border">
+    <div data-testid="wizard-shell" className="fixed inset-0 overflow-hidden bg-navy-50">
+      <aside data-testid="wizard-sidebar" className="fixed inset-y-0 left-0 hidden w-80 min-h-0 lg:flex flex-col bg-white border-r border-border">
         <div className="flex h-16 shrink-0 items-center gap-2 px-7 border-b border-border">
           <EzyMark size={30} className="shrink-0" />
           <div>
@@ -121,7 +120,7 @@ export function WizardShell({
           <StepProgress steps={WIZARD_STEPS} currentStep={activeStep} completedSteps={completedSteps} />
         </div>
 
-        <div className="shrink-0 px-7 py-5 border-t border-border">
+        <div data-testid="wizard-help" className="shrink-0 px-7 py-5 border-t border-border">
           <div className="flex items-center gap-2 mb-1">
             <Shield size={14} className="text-navy-500" aria-hidden />
             <span className="text-sm font-semibold text-navy-700">Need help?</span>
@@ -135,8 +134,8 @@ export function WizardShell({
         </div>
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center justify-between bg-white border-b border-border px-6">
+      <div data-testid="wizard-content" className="fixed inset-y-0 left-0 right-0 lg:left-80 min-h-0 min-w-0 overflow-hidden">
+        <header data-testid="wizard-header" className="absolute inset-x-0 top-0 flex h-16 items-center justify-between bg-white border-b border-border px-6">
           <div className="flex items-center gap-3">
             <span className="lg:hidden text-sm font-semibold text-navy-700">
               Step {activeStep} of {WIZARD_STEPS.length}
@@ -176,18 +175,14 @@ export function WizardShell({
           </DropdownMenu>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain thin-scroll">
+        <main data-testid="wizard-main" className="absolute inset-x-0 top-16 bottom-[79px] overflow-y-auto overscroll-contain thin-scroll">
           <div className="max-w-[920px] mx-auto px-6 lg:px-12 pt-8 pb-10">
             {children}
-            <details className="mt-8 rounded-xl border border-orange-200 bg-white p-4">
-              <summary className="cursor-pointer font-semibold text-primary-700">Documents checklist</summary>
-              <div className="mt-4"><ListingChecklist /></div>
-            </details>
           </div>
         </main>
 
         {!hideFooter && (
-          <div className="shrink-0 bg-white border-t border-border px-3 sm:px-6 lg:px-12 py-[18px] flex flex-wrap items-center gap-2 sm:gap-3">
+          <div data-testid="wizard-footer" className="absolute inset-x-0 bottom-0 min-h-[79px] bg-white border-t border-border px-3 sm:px-6 lg:px-12 py-[18px] flex flex-nowrap items-center gap-2 sm:gap-3">
             {handleBack ? (
               <Button variant="secondary" onClick={handleBack} type="button">{backLabel}</Button>
             ) : (

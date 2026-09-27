@@ -7,40 +7,43 @@ test.describe('Auth — Login flows', () => {
     await page.evaluate(() => localStorage.removeItem('stayflex-auth'))
   })
 
-  test('shows login page with demo accounts', async ({ page }) => {
+  test('shows login page without demo credentials', async ({ page }) => {
     await page.goto('/login')
     await expect(page.getByTestId('email-input')).toBeVisible()
     await expect(page.getByTestId('password-input')).toBeVisible()
     await expect(page.getByTestId('login-button')).toBeVisible()
-    await expect(page.getByTestId('demo-owner')).toBeVisible()
-    await expect(page.getByTestId('demo-admin')).toBeVisible()
-    await expect(page.getByTestId('demo-support')).toBeVisible()
+    await expect(page.getByText(/Demo accounts/i)).toHaveCount(0)
+    await expect(page.getByText(/demo1234/i)).toHaveCount(0)
   })
 
   test('Owner (onboarding) → redirects to /owner/onboarding/step1', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('demo-owner').click()
+    await page.getByTestId('email-input').fill('owner@demo.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-button').click()
     await expect(page).toHaveURL('/owner/onboarding/step1', { timeout: 5000 })
   })
 
   test('Owner (approved) → redirects to /owner/dashboard', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('demo-approved').click()
+    await page.getByTestId('email-input').fill('approved@demo.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-button').click()
     await expect(page).toHaveURL('/owner/dashboard', { timeout: 5000 })
   })
 
   test('Admin → redirects to /admin/verification', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('demo-admin').click()
+    await page.getByTestId('email-input').fill('admin@demo.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-button').click()
     await expect(page).toHaveURL('/admin/verification', { timeout: 5000 })
   })
 
   test('Support → redirects to /support/dashboard', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('demo-support').click()
+    await page.getByTestId('email-input').fill('support@demo.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-button').click()
     await expect(page).toHaveURL('/support/dashboard', { timeout: 5000 })
   })
@@ -83,7 +86,8 @@ test.describe('Auth — Login flows', () => {
 
     // Log in first
     await page.goto('/login')
-    await page.getByTestId('demo-admin').click()
+    await page.getByTestId('email-input').fill('admin@demo.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-button').click()
     await expect(page).toHaveURL('/admin/verification', { timeout: 5000 })
 

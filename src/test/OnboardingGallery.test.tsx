@@ -25,6 +25,14 @@ it('normalizes the bank form IFSC and retains manual bank details during lookup 
   expect(useOnboardingStore.getState().stepData[6]?.ifscCode).toBe('SBIN0000001')
 })
 
+it('shows the requested settlement options with next-business-day selected first', () => {
+  render(<Step6BankAccount />)
+  const settlement = screen.getByRole('combobox', { name: 'Settlement preference' })
+  expect(settlement).toHaveValue('d1')
+  expect(screen.getByRole('option', { name: 'Booking settlement — next business day' })).toBeVisible()
+  expect(screen.getByRole('option', { name: 'Weekly consolidated — every Monday' })).toBeVisible()
+})
+
 beforeEach(() => {
   vi.mocked(uploadFile).mockReset()
   URL.createObjectURL = vi.fn(() => 'blob:replacement')
@@ -38,7 +46,7 @@ it('keeps the gallery mounted and records uploads when browser storage is full',
   render(<Step3Policies />)
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Full', 'QuotaExceededError') })
   vi.mocked(uploadFile).mockResolvedValue({ url: 'https://files.example/new.png', key: 'new' })
-  fireEvent.change(screen.getAllByLabelText(/^Add .* photos$/)[0], {
+  fireEvent.change(screen.getAllByLabelText(/photo files$/)[0], {
     target: { files: [new File(['image'], 'new.png', { type: 'image/png' })] },
   })
   await waitFor(() => expect(useOnboardingStore.getState().stepData[3]?.photos).toHaveLength(2))
@@ -50,7 +58,7 @@ it('continues a batch after one upload fails and retains successful photos', asy
   vi.mocked(uploadFile).mockRejectedValueOnce(new Error('Offline'))
     .mockResolvedValueOnce({ url: 'https://files.example/new.png', key: 'new' })
   render(<Step3Policies />)
-  fireEvent.change(screen.getAllByLabelText(/^Add .* photos$/)[0], {
+  fireEvent.change(screen.getAllByLabelText(/photo files$/)[0], {
     target: { files: ['failed.png', 'new.png'].map(name => new File(['image'], name, { type: 'image/png' })) },
   })
   await waitFor(() => expect(useOnboardingStore.getState().stepData[3]?.photos).toHaveLength(2))

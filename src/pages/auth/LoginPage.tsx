@@ -22,34 +22,6 @@ const loginSchema = z.object({
 })
 type LoginForm = z.infer<typeof loginSchema>
 
-const DEMO_ACCOUNTS = [
-  {
-    label: 'Owner — Onboarding',
-    email: 'owner@demo.com',
-    colorCls: 'bg-primary-50 text-primary-700 hover:bg-primary-100',
-  },
-  {
-    label: 'Owner — Approved',
-    email: 'approved@demo.com',
-    colorCls: 'bg-success-50 text-success-700 hover:bg-success-50',
-  },
-  {
-    label: 'Admin',
-    email: 'admin@demo.com',
-    colorCls: 'bg-navy-100 text-navy-700 hover:bg-navy-200',
-  },
-  {
-    label: 'Support',
-    email: 'support@demo.com',
-    colorCls: 'bg-teal-50 text-teal-700 hover:bg-teal-100',
-  },
-  {
-    label: 'Super Admin',
-    email: 'superadmin@demo.com',
-    colorCls: 'bg-navy-800 text-white hover:bg-navy-700',
-  },
-]
-
 const BRAND_FEATURES = [
   { icon: TrendingUp, text: 'Real-time bookings & revenue dashboard' },
   { icon: IndianRupee, text: 'Fast D+1 settlements with TDS tracking' },
@@ -67,7 +39,6 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -103,11 +74,6 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
       toast.error(err instanceof Error ? err.message : 'Login failed')
       setApiError(true)
     }
-  }
-
-  const fillDemo = (email: string) => {
-    setValue('email', email, { shouldValidate: false })
-    setValue('password', 'demo1234', { shouldValidate: false })
   }
 
   return (
@@ -196,34 +162,6 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
             </Button>
           </form>
 
-          {/* Demo accounts — only shown in development builds */}
-          {import.meta.env.DEV && (
-            <div className="mt-8 pt-6 border-t border-border">
-              <p className="text-xs font-bold text-navy-400 uppercase tracking-wider mb-3">
-                Demo accounts — click to fill
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => fillDemo(acc.email)}
-                    className={cn(
-                      'rounded-lg px-3 py-2 text-xs font-semibold text-left transition-colors',
-                      acc.colorCls
-                    )}
-                    data-testid={`demo-${acc.email.split('@')[0]}`}
-                  >
-                    {acc.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-navy-300 mt-2">
-                Password for all:{' '}
-                <span className="font-mono bg-navy-50 px-1 rounded text-navy-500">demo1234</span>
-              </p>
-            </div>
-          )}
         </div>
       </div>
 

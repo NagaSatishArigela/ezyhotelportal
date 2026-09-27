@@ -1,4 +1,5 @@
 import type { DraftCompliance } from '@/lib/portal-api'
+import { completedOnboardingSteps } from '@/lib/onboarding-validation'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
@@ -85,7 +86,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     (set) => ({
       ...initialState,
       onBeforeNext: null,
-      editCompliance: () => set({ useSavedCompliance: false }),
+      editCompliance: () => set(state => ({ useSavedCompliance: false, completedSteps: completedOnboardingSteps(state.stepData) })),
       bindOwner: (ownerId, propertyId) => set((state) => {
         const sameOwner = state.ownerId === ownerId
         const matchingProperty = !!propertyId && state.draftId === propertyId
@@ -106,7 +107,10 @@ export const useOnboardingStore = create<OnboardingState>()(
       setAutoSaveState: (autoSaveState) => set({ autoSaveState }),
       setLastSavedAt: (lastSavedAt) => set({ lastSavedAt }),
       saveStepData: (step, data) =>
-        set((s) => ({ stepData: { ...s.stepData, [step]: data } })),
+        set((s) => {
+          const stepData = { ...s.stepData, [step]: data }
+          return { stepData, completedSteps: completedOnboardingSteps(stepData, s.useSavedCompliance && !!s.savedCompliance, s.completedSteps.includes(7)) }
+        }),
       setOnBeforeNext: (fn) => set({ onBeforeNext: fn }),
       reset: () => set(state => ({ ...initialState, selectionVersion: state.selectionVersion + 1, onBeforeNext: null })),
     }),

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Clock } from 'lucide-react'
-import axios from 'axios'
+import { refreshSession } from '@/lib/refresh-session'
 import { useAuthStore } from '@/store/auth.store'
 import { useSessionExpiry } from '@/hooks/useSessionExpiry'
 import { useNavigate } from '@tanstack/react-router'
 
 export function SessionExpiryWarning() {
-  const { refreshToken, setToken, setRefreshToken, logout } = useAuthStore()
+  const { refreshToken, logout } = useAuthStore()
+  const [error, setError] = useState('')
   const [extending, setExtending] = useState(false)
   const navigate = useNavigate()
   // When the countdown hits 0 the token is dead — log out and redirect so the
@@ -26,19 +27,15 @@ export function SessionExpiryWarning() {
   const handleExtend = async () => {
     if (!refreshToken) return
     setExtending(true)
+    setError('')
     try {
       // Call refresh directly (not via api instance) to avoid re-entering the 401 interceptor
-      const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
-        `${import.meta.env.VITE_API_URL ?? '/api'}/auth/refresh-token`,
-        { refreshToken },
-      )
-      setToken(data.accessToken)
-      setRefreshToken(data.refreshToken)
+      await refreshSession()
       dismiss()
     } catch {
       // Refresh failed — session truly expired; logout and redirect
-      logout()
-      navigate({ to: '/login' })
+      if (!useAuthStore.getState().isAuthenticated) navigate({ to: '/login' })
+      else setError('Could not renew your session. Check your connection and retry. Your form is still open.')
     } finally {
       setExtending(false)
     }
@@ -76,7 +73,9 @@ export function SessionExpiryWarning() {
         </div>
 
         <div className="flex flex-col gap-2">
+          {error && <p role="alert" className="text-sm text-error-600">{error}</p>}
           <button
+            type="button"
             onClick={handleExtend}
             disabled={extending}
             className="w-full rounded-[10px] bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 transition-colors"
@@ -84,6 +83,7 @@ export function SessionExpiryWarning() {
             {extending ? 'Extending session…' : 'Stay logged in'}
           </button>
           <button
+            type="button"
             onClick={handleLogout}
             className="w-full rounded-[10px] border border-border bg-white px-4 py-2.5 text-sm font-semibold text-navy-600 hover:bg-navy-50 transition-colors"
           >
