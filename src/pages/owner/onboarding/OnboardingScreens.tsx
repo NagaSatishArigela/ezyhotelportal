@@ -1,16 +1,17 @@
 import { SavedCompliance } from '@/components/owner/SavedCompliance'
 import { documentRequirements, type DocumentType } from '@/lib/document-requirements'
-import { ensureApplicationDraft, submitApplication } from '@/lib/onboarding-session'
+import { submitApplication } from '@/lib/onboarding-session'
+import { saveApplicationProgress } from '@/lib/save-application'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { step1Schema, step2Schema, photosGateSchema, step4Schema, docsGateSchema, step6Schema, completedOnboardingSteps, type Step1Data, type Step2Data, type HouseRulesData, type Step4Data, type RoomData, type Step6Data } from '@/lib/onboarding-validation'
 import { toast } from 'sonner'
 import {
   Building2, Camera, CheckCircle, CreditCard, FileText, Home,
   IndianRupee, MapPin, Shield, Upload, Wifi, Car, Waves, Dumbbell,
   Utensils, Phone, Trash2, Plus, Search, Loader2, CheckCheck,
-  Info, ChevronDown, Star, X,
+  ChevronDown, Star, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,7 +29,7 @@ import { useOnboardingStore } from '@/store/onboarding.store'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import {
   saveOnboardingStep,
-  verifyIFSC, pennyDrop, uploadFile, verifyPincode,
+  verifyIFSC, uploadFile, verifyPincode,
 } from '@/lib/portal-api'
 import { completeServerSteps } from '@/lib/onboarding-mapping'
 import { useNavigate } from '@tanstack/react-router'
@@ -45,35 +46,15 @@ import { useNavigate } from '@tanstack/react-router'
 // pending save is flushed; a rejection here blocks navigation in WizardShell.
 // Last successfully-saved payload signature per `${draftId}:${serverStep}` —
 // lets autosave skip re-PATCHing unchanged steps and avoid rate-limit 429s.
-const lastSavedSignature = new Map<string, string>()
 
 function useOnboardingAutoSave(step: number, validate?: () => Promise<boolean>) {
   const setOnBeforeNext = useOnboardingStore((s) => s.setOnBeforeNext)
 
-  const saveFn = useCallback(async () => {
-    const stepData = useOnboardingStore.getState().stepData
-    // A server step spans multiple UX steps and the server validates each PATCH
-    // against the full step DTO, so we only persist server steps that are now
-    // COMPLETE. Incomplete steps stay in the local draft and flush once their
-    // remaining fields are entered — no partial PATCH, no 400.
-    const complete = completeServerSteps(stepData)
-    if (complete.length === 0) return
-
-    const draftId = await ensureApplicationDraft()
-    // Only PATCH steps whose payload actually changed since the last successful
-    // save — flushing every complete step on each keystroke would trip the
-    // backend's per-IP rate limit (429).
-    for (const { step: serverStep, payload } of complete) {
-      if (serverStep === 5 && useOnboardingStore.getState().useSavedCompliance) continue
-      const key = `${draftId}:${serverStep}`
-      const sig = JSON.stringify(payload)
-      if (lastSavedSignature.get(key) === sig) continue
-      await saveOnboardingStep(draftId, serverStep, payload)
-      lastSavedSignature.set(key, sig)
-    }
-  }, [])
-
-  const result = useAutoSave({ step, saveFn })
+  const result = useAutoSave({
+    step,
+    saveFn: () => saveApplicationProgress(step),
+    onError: (error) => toast.error(describeProgressSaveError(error)),
+  })
 
   // Keep stable refs so the effect dependency doesn't change on every render
   const saveNowRef = useRef(result.saveNow)
@@ -92,7 +73,11 @@ function useOnboardingAutoSave(step: number, validate?: () => Promise<boolean>) 
           )
         }
       }
-      await saveNowRef.current()
+      try {
+        await saveNowRef.current()
+      } catch (error) {
+        throw Object.assign(new Error(describeProgressSaveError(error)), { isValidation: true })
+      }
     })
     return () => setOnBeforeNext(null)
   }, [setOnBeforeNext])
@@ -105,9 +90,9 @@ function useOnboardingAutoSave(step: number, validate?: () => Promise<boolean>) 
 const PLATFORM_COMMISSION = 12 // default %; editable by Admin in Super Admin settings
 
 const COMMISSION_BY_CATEGORY: Record<string, number> = {
-  budget: 15,
-  mid: 12,
-  premium: 10,
+  budget: 12,
+  mid: 10,
+  premium: 8,
 }
 
 function StepHeader({ step, title, subtitle }: { step: number; title: string; subtitle: string }) {
@@ -156,21 +141,11 @@ function TwoCol({ children, side }: { children: React.ReactNode; side: React.Rea
 
 // ── Step 1 — Account & owner identity ──────────────────────────────────────
 
-const step1Schema = z.object({
-  ownerName:        z.string().min(2, 'At least 2 characters'),
-  phone:            z.string().regex(/^\d{10}$/, 'Enter 10-digit mobile number'),
-  email:            z.string().email('Enter a valid email'),
-  businessEntity:   z.enum(['individual', 'sole_proprietor', 'partnership', 'llp', 'private_limited', 'public_limited']),
-  businessName:     z.string().min(2, 'Required'),
-  gstNumber:        z.string().optional().or(z.literal('')),
-  propertyCategory: z.enum(['budget', 'mid', 'premium']),
-})
-type Step1Data = z.infer<typeof step1Schema>
 
 const CATEGORIES = [
-  { value: 'budget',  label: 'Budget',      desc: 'Economy lodging, no frills', commission: 15 },
-  { value: 'mid',     label: 'Mid-market',  desc: 'Comfort + standard amenities', commission: 12 },
-  { value: 'premium', label: 'Premium',     desc: 'Upscale experience, full service', commission: 10 },
+  { value: 'budget',  label: 'Budget',      desc: 'Economy lodging, no frills', commission: 12 },
+  { value: 'mid',     label: 'Mid-market',  desc: 'Comfort + standard amenities', commission: 10 },
+  { value: 'premium', label: 'Premium',     desc: 'Upscale experience, full service', commission: 8 },
 ]
 
 export function Step1PropertyDetails() {
@@ -223,8 +198,8 @@ export function Step1PropertyDetails() {
             <FieldWrapper label="Legal / business name" required className="sm:col-span-2" error={errors.businessName?.message}>
               <Input {...register('businessName')} placeholder="Exact name as per GST / PAN" error={!!errors.businessName} />
             </FieldWrapper>
-            <FieldWrapper label="GST number" hint="Optional — required to receive GST invoices for commission" className="sm:col-span-2">
-              <Input {...register('gstNumber')} placeholder="22AAAAA0000A1Z5" className="font-mono" />
+            <FieldWrapper label="GST number" hint="Optional — required to receive GST invoices for commission" error={errors.gstNumber?.message} className="sm:col-span-2">
+              <Input {...register('gstNumber')} placeholder="22AAAAA0000A1Z5" error={!!errors.gstNumber} className="font-mono" />
             </FieldWrapper>
           </div>
 
@@ -253,13 +228,6 @@ export function Step1PropertyDetails() {
             <p className="text-xs text-navy-400 mt-2">Default rate. Can be customised by EzyHotels admin.</p>
           </div>
 
-          <div className="rounded-[10px] border border-primary-100 bg-primary-50 p-4 flex items-start gap-3">
-            <Info size={16} className="text-primary-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-navy-900">Phone OTP verification</p>
-              <p className="mt-0.5 text-sm text-navy-600">We'll send a 6-digit code to <strong>{watch('phone') || 'your mobile'}</strong> before final submission to confirm account ownership.</p>
-            </div>
-          </div>
         </div>
       </TwoCol>
     </div>
@@ -300,24 +268,6 @@ const AMENITIES_LIST = [
   { id: 'ev_charging',  label: 'EV charging',       icon: null },
 ]
 
-const step2Schema = z.object({
-  propertyName:        z.string().min(2, 'Required'),
-  propertyType:        z.string().min(1, 'Select a type'),
-  address:             z.string().min(5, 'Required'),
-  addressLine2:        z.string().min(5, 'At least 5 characters').max(300, 'Max 300 characters'),
-  latitude:            z.number().min(-90, 'Invalid latitude').max(90, 'Invalid latitude'),
-  longitude:           z.number().min(-180, 'Invalid longitude').max(180, 'Invalid longitude'),
-  city:                z.string().min(2, 'Required'),
-  state:               z.string().min(2, 'Required'),
-  pincode:             z.string().regex(/^\d{6}$/, '6-digit PIN code'),
-  description:         z.string().min(20, 'Minimum 20 characters'),
-  amenities:           z.array(z.string()).min(3, 'Select at least 3 amenities'),
-  bookingPolicy:       z.enum(['hourly', 'fullday', 'both']),
-  minBookingHours:     z.number().min(1).max(6),
-  defaultCheckinTime:  z.string(),
-  defaultCheckoutTime: z.string(),
-})
-type Step2Data = z.infer<typeof step2Schema>
 
 export function Step2RoomsPricing() {
   const stored = useOnboardingStore((s) => s.stepData[2] as Partial<Step2Data> | undefined)
@@ -581,16 +531,6 @@ const MAX_PER_CATEGORY = 10
 const MAX_TOTAL = 25
 
 // Minimal gate: at least one photo AND one marked as cover before Continue.
-const photosGateSchema = z
-  .array(
-    z.object({
-      category: z.string(),
-      url: z.string().url(),
-      isPrimary: z.boolean().optional(),
-    }),
-  )
-  .min(1, 'Add at least one photo before continuing.')
-  .refine((photos) => photos.some((p) => p.isPrimary), 'Mark one photo as the cover image.')
 
 export function Step3Policies() {
   const draftId = useOnboardingStore((s) => s.draftId)
@@ -602,6 +542,7 @@ export function Step3Policies() {
   const [busy, setBusy] = useState<PhotoCategory | null>(null)
   const uploadBusy = useRef(false)
   const localPhotos = useRef<Record<string, string>>({})
+  const categoryInputs = useRef<Partial<Record<PhotoCategory, HTMLInputElement | null>>>({})
   const replacementInput = useRef<HTMLInputElement>(null)
   const replacement = useRef<PhotoEntry | null>(null)
   useEffect(() => () => { Object.values(localPhotos.current).forEach(URL.revokeObjectURL) }, [])
@@ -731,37 +672,43 @@ export function Step3Policies() {
                     </p>
                     <p className="text-xs text-navy-500">{hint}</p>
                   </div>
-                  <label className={cn(
+                  <button
+                    type="button"
+                    aria-label={`Add ${label} photos`}
+                    disabled={busy !== null}
+                    onClick={() => categoryInputs.current[id]?.click()}
+                    className={cn(
                     'inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors',
                     busy === id ? 'border-navy-200 text-navy-400 pointer-events-none' : 'border-primary-600 text-primary-700 hover:bg-primary-50',
                   )}>
                     {busy === id ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                     Add
-                    <input
-                      type="file"
-                      accept={PHOTO_ACCEPT}
-                      disabled={busy !== null}
-                      aria-label={`Add ${label} photos`}
-                      multiple
-                      className="sr-only"
-                      onChange={(e) => { addFiles(id, e.target.files); e.target.value = '' }}
-                    />
-                  </label>
+                  </button>
+                  <input
+                    ref={(input) => { categoryInputs.current[id] = input }}
+                    type="file"
+                    accept={PHOTO_ACCEPT}
+                    disabled={busy !== null}
+                    aria-label={`${label} photo files`}
+                    multiple
+                    className="sr-only"
+                    onChange={(e) => { addFiles(id, e.target.files); e.target.value = '' }}
+                  />
                 </div>
 
                 {catPhotos.length > 0 && (
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 mt-3">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-3 mt-3">
                     {catPhotos.map((p) => (
                       <div key={p.id} className="relative group min-w-0 overflow-hidden rounded-[8px] border border-border">
-                        <div className="aspect-[4/3] w-full bg-navy-50">
-                          <UploadedPhoto src={localPhotos.current[p.id] || p.url} alt={label} className="w-full h-full object-cover" />
+                        <div className="relative aspect-[4/3] w-full overflow-hidden bg-navy-50">
+                          <UploadedPhoto src={localPhotos.current[p.id] || p.url} alt={label} className="absolute inset-0 w-full h-full object-cover" />
                         </div>
                         {p.isPrimary && (
                           <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-[6px] bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                             <Star size={9} className="fill-white" /> Cover
                           </span>
                         )}
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border p-2 bg-white">
+                        <div className="grid grid-cols-2 min-h-20 items-center gap-2 border-t border-border p-2 bg-white">
                           <FilePreview src={localPhotos.current[p.id] || p.url} name={`${label} photo`} />
                           <button type="button" className="text-xs text-primary-700 underline" disabled={busy !== null} aria-label={`Replace ${label} photo`} onClick={() => { replacement.current = p; replacementInput.current?.click() }}>Replace</button>
                           {!p.isPrimary && (
@@ -821,41 +768,8 @@ const ROOM_TYPE_OPTIONS = [
   { value: 'suite',  label: 'Suite' },
 ] as const
 
-const roomSchema = z.object({
-  id:           z.string(),
-  name:         z.string().min(2, 'Required'),
-  type:         z.enum(['ac', 'nonac', 'dorm', 'suite']),
-  count:        z.number().min(1, 'At least 1 room'),
-  maxOccupancy: z.number().min(1).max(10),
-  bedType:      z.string(), // Display-only value; the server does not persist bed type.
-  sizeNote:     z.string().optional(),
-  amenities:    z.array(z.string()),
-  hourlyRate:   z.number().min(50).optional(),
-  fulldayRate:  z.number().min(500).optional(),
-})
 
-const houseRulesSchema = z.object({
-  couple_friendly:   z.enum(['yes', 'no', 'on_request']),
-  pet_friendly:      z.enum(['yes', 'no', 'on_request']),
-  party_allowed:     z.enum(['yes', 'no', 'on_request']),
-  outside_food:      z.enum(['yes', 'no', 'on_request']),
-  alcohol_allowed:   z.enum(['yes', 'no', 'not_allowed']),
-  smoking_allowed:   z.enum(['yes', 'no', 'designated_area']),
-  bachelor_groups:   z.enum(['yes', 'no']),
-  id_proof_required: z.enum(['yes', 'no']),
-  noiseCutoffTime:   z.string().optional(),
-  alcoholPolicyNote: z.string().max(200, 'Max 200 characters').optional(),
-})
-type HouseRulesData = z.infer<typeof houseRulesSchema>
 
-const step4Schema = z.object({
-  rooms:           z.array(roomSchema).min(1, 'Add at least one room type'),
-  smartPricing:    z.boolean(),
-  seatingCapacity: z.number().min(50, 'Min 50').max(5000, 'Max 5000').optional(),
-  houseRules:      houseRulesSchema,
-})
-type Step4Data = z.infer<typeof step4Schema>
-type RoomData = z.infer<typeof roomSchema>
 
 const YNR = [
   { value: 'yes', label: 'Yes' },
@@ -1027,15 +941,14 @@ export function Step4LegalTax() {
   const isBanquet = propertyType === 'banquet'
 
   const [rooms, setRooms] = useState<RoomData[]>(stored?.rooms as RoomData[] ?? DEFAULT_ROOMS)
-  const [smartPricing, setSmartPricing] = useState(stored?.smartPricing ?? true)
   const [seatingCapacity, setSeatingCapacity] = useState<number | undefined>(
     (stored as { seatingCapacity?: number } | undefined)?.seatingCapacity,
   )
   const [houseRules, setHouseRules] = useState<HouseRulesData>(
     (stored as { houseRules?: HouseRulesData } | undefined)?.houseRules ?? DEFAULT_HOUSE_RULES,
   )
-  const roomsRef = useRef({ rooms, smartPricing, seatingCapacity, houseRules })
-  roomsRef.current = { rooms, smartPricing, seatingCapacity, houseRules }
+  const roomsRef = useRef({ rooms, seatingCapacity, houseRules })
+  roomsRef.current = { rooms, seatingCapacity, houseRules }
   const { triggerSave } = useOnboardingAutoSave(4, async () => {
     const base = step4Schema.safeParse(roomsRef.current).success
     // seatingCapacity is server-required only for banquet properties.
@@ -1047,8 +960,8 @@ export function Step4LegalTax() {
   })
 
   useEffect(() => {
-    triggerSave({ rooms, smartPricing, seatingCapacity, houseRules } as Record<string, unknown>)
-  }, [JSON.stringify(rooms), smartPricing, seatingCapacity, JSON.stringify(houseRules)])
+    triggerSave({ rooms, seatingCapacity, houseRules } as Record<string, unknown>)
+  }, [JSON.stringify(rooms), seatingCapacity, JSON.stringify(houseRules)])
 
   const addRoom = () => {
     const newRoom: RoomData = {
@@ -1174,27 +1087,6 @@ export function Step4LegalTax() {
         </div>
       </Card>
 
-      {/* Smart pricing */}
-      <Card>
-        <div className="flex items-start gap-4">
-          <div className="flex-1">
-            <p className="font-display font-bold text-navy-900">Smart pricing</p>
-            <p className="text-sm text-navy-600 mt-1">
-              EzyHotels automatically adjusts your prices up to ±20% based on real-time demand, day-of-week, and local events.
-              Owners using smart pricing earn <strong>18% more</strong> on average.
-            </p>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer shrink-0">
-            <input
-              type="checkbox"
-              checked={smartPricing}
-              onChange={(e) => { setSmartPricing(e.target.checked); toast.success(`Smart pricing ${e.target.checked ? 'enabled' : 'disabled'}`) }}
-              className="h-5 w-5 accent-primary-600"
-            />
-            <span className="text-sm font-semibold text-navy-700">{smartPricing ? 'On' : 'Off'}</span>
-          </label>
-        </div>
-      </Card>
     </div>
   )
 }
@@ -1204,10 +1096,7 @@ export function Step4LegalTax() {
 // Contract §3 DocumentType values used by the portal doc lanes.
 interface DocValue { type: DocumentType; url: string }
 
-// Minimal gate: fire_safety_cert must be present before Continue.
-const docsGateSchema = z
-  .array(z.object({ type: z.string(), url: z.string().url() }))
-  .refine((docs) => docs.some((d) => d.type === 'fire_safety_cert'), 'Upload the fire safety certificate before continuing.')
+// Require only the documents selected by the shared entity/amenity rules.
 
 export function Step5Documents() {
   const saved = useOnboardingStore(s => s.useSavedCompliance)
@@ -1219,7 +1108,7 @@ function DocumentsForm() {
   const step1Data = useOnboardingStore((s) => s.stepData[1] as Partial<Step1Data> | undefined)
   const amenities = useOnboardingStore((s) => (s.stepData[2] as { amenities?: string[] } | undefined)?.amenities)
   const entity = step1Data?.businessEntity ?? 'individual'
-  const hasGST = !!(step1Data?.gstNumber)
+  const hasGST = !!String(step1Data?.gstNumber ?? '').trim()
   const isCompany = entity !== 'individual' && entity !== 'sole_proprietor'
 
   // docId → uploaded url. Restored from persisted stepData on reload.
@@ -1234,13 +1123,18 @@ function DocumentsForm() {
 
   const validate = useCallback(async () => {
     if (pendingUploads.current.size) { toast.error('Wait for document uploads to finish.'); return false }
+    const missing = DOCS.find((document) => document.required && !urls[document.id])
+    if (missing) {
+      toast.error(`Upload ${missing.label} before continuing.`)
+      return false
+    }
     const result = docsGateSchema.safeParse(documents)
     if (!result.success) {
       toast.error(result.error.issues[0]?.message ?? 'Upload the required documents.')
       return false
     }
     return true
-  }, [JSON.stringify(documents)])
+  }, [JSON.stringify(documents), JSON.stringify(DOCS)])
 
   const { triggerSave } = useOnboardingAutoSave(5, validate)
   useEffect(() => {
@@ -1260,7 +1154,7 @@ function DocumentsForm() {
             <p className="text-sm font-semibold text-navy-900 mb-2">Required for {entity === 'individual' ? 'individuals' : 'companies'}</p>
             <p className="text-xs text-navy-500">
               {isCompany
-                ? 'Company registrations need company PAN, GST, ownership proof, and entity registration documents.'
+                ? 'Company registrations need company PAN, ownership proof, and entity registration documents. GST is optional; provide its certificate if you entered a GST number.'
                 : 'Individual listings need personal PAN, Aadhaar, and property ownership documents.'}
             </p>
             <div className="mt-3 flex items-center gap-2">
@@ -1300,19 +1194,6 @@ function DocumentsForm() {
 
 // ── Step 6 — Bank & payouts ─────────────────────────────────────────────────
 
-const step6Schema = z.object({
-  accountHolderName:    z.string().min(2, 'Required'),
-  accountNumber:        z.string().min(9, 'Invalid account number').max(18),
-  ifscCode:             z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC format'),
-  bankName:             z.string().min(2, 'Required'),
-  accountType:          z.enum(['savings', 'current']),
-  pan:                  z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN (e.g. ABCDE1234F)'),
-  settlementPreference: z.enum(['d1', 'weekly']),
-  tdsConsent:           z.boolean(),
-  tcAccepted:           z.boolean().refine((v) => v === true, 'You must accept the Terms & Conditions'),
-  formCAcknowledged:    z.boolean().refine((v) => v === true, 'You must acknowledge the Form C declaration'),
-})
-type Step6Data = z.infer<typeof step6Schema>
 
 export function Step6BankAccount() {
   const saved = useOnboardingStore(s => s.useSavedCompliance)
@@ -1345,7 +1226,6 @@ function BankForm() {
   const [bankBranch, setBankBranch] = useState('')
   const [ifscError, setIfscError] = useState('')
   const ifscRequest = useRef(0)
-  const [pennyStatus, setPennyStatus] = useState<'idle' | 'loading' | 'ok'>('idle')
 
   const lookupIFSC = async () => {
     const request = ++ifscRequest.current
@@ -1367,29 +1247,18 @@ function BankForm() {
     }
   }
 
-  const runPennyDrop = async () => {
-    setPennyStatus('loading')
-    try {
-      const res = await pennyDrop()
-      if (res.success) { setPennyStatus('ok'); toast.success(res.message) }
-    } catch {
-      toast.error('Penny drop failed. Check account details.')
-      setPennyStatus('idle')
-    }
-  }
-
   return (
     <div className="space-y-6">
       <StepHeader step={6} title="Bank & payouts" subtitle="Add the bank account where your D+1 settlements will land. Must match the verified owner or business name." />
       <TwoCol side={
         <div className="space-y-4">
-          <SideNote icon={Shield} title="Bank-grade security" body="Your account details are encrypted. We run a ₹1 penny drop to confirm the account is real before your first payout." />
+          <SideNote icon={Shield} title="Bank-grade security" body="Your account details are encrypted and reviewed securely before your first payout." />
           <div className="rounded-(--radius-lg) border border-border bg-white p-4 space-y-3">
             <p className="text-sm font-semibold text-navy-900">Settlement timeline</p>
             <div className="space-y-2 text-xs text-navy-600">
-              <div className="flex gap-2"><span className="text-primary-600 font-bold">D+1</span><span>Payment lands next business day after checkout</span></div>
-              <div className="flex gap-2"><span className="text-navy-400 font-bold">TDS</span><span>1% TDS deducted when monthly payouts exceed ₹30,000</span></div>
+              <div className="flex gap-2"><span className="text-primary-600 font-bold">Next business day</span><span>Payment lands on the next business day after checkout</span></div>
               <div className="flex gap-2"><span className="text-navy-400 font-bold">GST</span><span>Commission invoice issued if GSTIN provided in Step 1</span></div>
+              <div className="flex gap-2"><span className="text-navy-400 font-bold">TDS</span><span>1% TDS deducted when monthly payouts exceed ₹30,000</span></div>
             </div>
           </div>
         </div>
@@ -1434,26 +1303,9 @@ function BankForm() {
             </FieldWrapper>
           </div>
 
-          {/* Penny drop */}
-          <div className={cn(
-            'rounded-[12px] border p-4 flex items-center gap-4 transition-colors',
-            pennyStatus === 'ok' ? 'border-success-500 bg-success-50' : 'border-border bg-navy-50'
-          )}>
-            <div className="flex-1">
-              <p className="font-semibold text-navy-900 text-sm">Verify bank account</p>
-              <p className="text-xs text-navy-500 mt-0.5">We deposit ₹1 to confirm the account is active. It's returned within 24 hours.</p>
-            </div>
-            {pennyStatus === 'ok'
-              ? <Badge variant="green"><CheckCircle size={12} className="mr-1" />Verified</Badge>
-              : <Button type="button" size="sm" variant="outline" onClick={runPennyDrop} disabled={pennyStatus === 'loading'}>
-                  {pennyStatus === 'loading' ? <><Loader2 size={12} className="animate-spin mr-1" />Verifying…</> : 'Verify now'}
-                </Button>
-            }
-          </div>
-
           <FieldWrapper label="Settlement preference">
-            <Select {...register('settlementPreference')} className="w-full sm:w-80">
-              <option value="d1">D+1 automatic — next business day after checkout</option>
+            <Select {...register('settlementPreference')} aria-label="Settlement preference" className="w-full sm:w-80">
+              <option value="d1">Booking settlement — next business day</option>
               <option value="weekly">Weekly consolidated — every Monday</option>
             </Select>
           </FieldWrapper>
@@ -1523,6 +1375,12 @@ function describeSubmitError(data: SubmitErrorBody | undefined): string {
   return data?.message ?? 'Submission failed. Please review your details and try again.'
 }
 
+function describeProgressSaveError(error: unknown): string {
+  const data = (error as { response?: { data?: SubmitErrorBody } })?.response?.data
+  if (data) return describeSubmitError(data)
+  return 'Failed to save progress. Please try again.'
+}
+
 export function Step7ReviewSubmit() {
   const stepData = useOnboardingStore((s) => s.stepData)
   const savedCompliance = useOnboardingStore(s => s.useSavedCompliance ? s.savedCompliance : null)
@@ -1530,7 +1388,7 @@ export function Step7ReviewSubmit() {
   const s2 = stepData[2] as Partial<Step2Data> | undefined
   const s3 = stepData[3] as { photos?: Array<{ url?: string }> } | undefined
   const s5 = stepData[5] as { documents?: Array<{ type?: string; url?: string }> } | undefined
-  const s4 = stepData[4] as { rooms?: RoomData[]; smartPricing?: boolean } | undefined
+  const s4 = stepData[4] as { rooms?: RoomData[] } | undefined
   const s6 = stepData[6] as Partial<Step6Data> | undefined
 
   const [agreed, setAgreed] = useState(false)
@@ -1540,42 +1398,43 @@ export function Step7ReviewSubmit() {
 
   const commission = COMMISSION_BY_CATEGORY[s1?.propertyCategory ?? 'mid'] ?? PLATFORM_COMMISSION
 
+  const completed = completedOnboardingSteps(stepData, !!savedCompliance)
   const CHECKLIST = [
     {
       step: 1, icon: Home, label: 'Owner identity',
       summary: s1?.ownerName ? `${s1.ownerName} · ${s1.businessEntity?.toUpperCase()} · ${s1.propertyCategory?.toUpperCase()} category` : 'Not completed',
-      ok: !!(s1?.ownerName && s1?.phone && s1?.email),
+      ok: completed.includes(1),
     },
     {
       step: 2, icon: MapPin, label: 'Property info & amenities',
       summary: s2?.propertyName
         ? `${s2.propertyName} · ${s2.city} · ${s2.amenities?.length ?? 0} amenities · ${s2.bookingPolicy?.replace('_', ' ')}`
         : 'Not completed',
-      ok: !!(s2?.propertyName && s2?.city && (s2?.amenities?.length ?? 0) >= 3 && s2?.bookingPolicy),
+      ok: completed.includes(2),
     },
     {
       step: 3, icon: Camera, label: 'Media & gallery',
       summary: s3?.photos?.length ? `${s3.photos.length} photo${s3.photos.length > 1 ? 's' : ''} uploaded` : 'Not completed',
-      ok: !!s3?.photos?.some((photo) => photo.url),
+      ok: completed.includes(3),
     },
     {
       step: 4, icon: IndianRupee, label: 'Rooms & pricing',
       summary: s4?.rooms?.length
         ? `${s4.rooms.length} room type${s4.rooms.length > 1 ? 's' : ''} · Commission ${commission}%`
         : 'Not completed',
-      ok: !!(s4?.rooms?.length),
+      ok: completed.includes(4),
     },
     {
       step: 5, icon: FileText, label: 'Documents & KYC',
       summary: savedCompliance ? `${savedCompliance.documents.length} saved documents` : s5?.documents?.length ? `${s5.documents.length} document${s5.documents.length > 1 ? 's' : ''} uploaded` : 'Not completed',
-      ok: !!savedCompliance || !!s5?.documents?.some((document) => document.url),
+      ok: completed.includes(5),
     },
     {
       step: 6, icon: CreditCard, label: 'Bank & payouts',
       summary: savedCompliance ? `${savedCompliance.accountHolderName} - ${savedCompliance.bankAccountNumberMasked}` : s6?.bankName
         ? `${s6.accountHolderName} · ${s6.bankName} · ${s6.settlementPreference === 'd1' ? 'D+1 settlement' : 'Weekly settlement'}`
         : 'Not completed',
-      ok: !!savedCompliance || !!(s6?.accountHolderName && s6?.bankName),
+      ok: completed.includes(6),
     },
   ]
 

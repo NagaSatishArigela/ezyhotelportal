@@ -43,13 +43,10 @@ describe('LoginPage', () => {
     expect(screen.getByText('Forgot password?')).toBeInTheDocument()
   })
 
-  it('renders all 5 demo account buttons', () => {
+  it('does not expose demo account credentials', () => {
     renderLogin()
-    expect(screen.getByTestId('demo-owner')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-approved')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-admin')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-support')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-superadmin')).toBeInTheDocument()
+    expect(screen.queryByText(/Demo accounts/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/demo1234/i)).not.toBeInTheDocument()
   })
 
   it('shows validation error for invalid email', async () => {
@@ -73,11 +70,10 @@ describe('LoginPage', () => {
     })
   })
 
-  it('clicking a demo button fills the email field', async () => {
-    const user = userEvent.setup()
+  it('leaves credentials empty for manual sign in', () => {
     renderLogin()
-    await user.click(screen.getByTestId('demo-owner'))
-    expect((screen.getByTestId('email-input') as HTMLInputElement).value).toBe('owner@demo.com')
+    expect((screen.getByTestId('email-input') as HTMLInputElement).value).toBe('')
+    expect((screen.getByTestId('password-input') as HTMLInputElement).value).toBe('')
   })
 
   it('calls portalLogin with correct credentials', async () => {

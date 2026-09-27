@@ -413,7 +413,7 @@ export function mapStep5(data: PortalStepData): ServerStep5Payload {
   const s6 = (data[6] ?? {}) as PortalStep6
   const out: ServerStep5Payload = {}
 
-  putStr(out, 'gstin', s1.gstNumber)
+  putStr(out, 'gstin', s1.gstNumber?.trim().toUpperCase())
   putStr(out, 'legalBusinessName', s1.businessName)
   if (typeof s6.pan === 'string' && s6.pan.trim() !== '') {
     out.pan = s6.pan.trim().toUpperCase()
@@ -477,7 +477,7 @@ export function mapServerStep(
 // DTO-required fields per server step (submit-time conditional fields like
 // minBookingHours / hourlyRate are NOT required at step-save time).
 const SERVER_STEP_REQUIRED: Record<number, string[]> = {
-  1: ['propertyName', 'propertyType', 'bookingPolicy', 'businessEntity', 'ownerFirstName', 'ownerLastName', 'category'],
+  1: ['propertyName', 'propertyType', 'bookingPolicy', 'businessEntity', 'ownerFirstName', 'category'],
   2: ['latitude', 'longitude', 'addressLine1', 'addressLine2', 'pincode', 'city', 'state'],
   3: [], // custom check below (rooms + amenities + houseRules)
   4: [], // custom check below (>=1 photo)

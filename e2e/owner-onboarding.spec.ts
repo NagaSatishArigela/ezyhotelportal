@@ -6,7 +6,7 @@
  * so there is no per-test addInitScript cleanup.
  *
  * JS-level mocks already in portal-api.ts (no page.route needed):
- *   verifyIFSC, pennyDrop, uploadDocument, verifyPincode
+ *   verifyIFSC, uploadDocument, verifyPincode
  */
 
 import { test, expect, type Page } from '@playwright/test'
@@ -33,7 +33,7 @@ function expectStepHeading(page: Page, title: string) {
 // ── Shared helpers ───────────────────────────────────────────────────────────
 
 async function setupApiMocks(page: Page) {
-  await page.route('**/api/auth/login', async (route) => {
+  await page.route('**/auth/login', async (route) => {
     if (route.request().method() !== 'POST') { await route.continue(); return }
     await route.fulfill({
       json: {
@@ -50,22 +50,27 @@ async function setupApiMocks(page: Page) {
     })
   })
 
-  await page.route('**/api/me/property-status', async (route) => {
+  await page.route('**/me/property-status', async (route) => {
     if (route.request().method() !== 'GET') { await route.continue(); return }
     await route.fulfill({ json: { id: null, status: null, draftStep: null } })
   })
 
-  await page.route('**/api/properties/draft', async (route) => {
+  await page.route('**/me/properties', async (route) => {
+    if (route.request().method() !== 'GET') { await route.continue(); return }
+    await route.fulfill({ json: [] })
+  })
+
+  await page.route('**/properties/draft', async (route) => {
     if (route.request().method() !== 'POST') { await route.continue(); return }
     await route.fulfill({ json: { propertyId: DRAFT_ID } })
   })
 
-  await page.route(`**/api/properties/${DRAFT_ID}/step/**`, async (route) => {
+  await page.route(`**/properties/${DRAFT_ID}/step/**`, async (route) => {
     if (route.request().method() !== 'PATCH') { await route.continue(); return }
     await route.fulfill({ json: { ok: true, savedAt: new Date().toISOString() } })
   })
 
-  await page.route(`**/api/properties/${DRAFT_ID}/submit`, async (route) => {
+  await page.route(`**/properties/${DRAFT_ID}/submit`, async (route) => {
     if (route.request().method() !== 'POST') { await route.continue(); return }
     await route.fulfill({
       json: {
@@ -77,13 +82,13 @@ async function setupApiMocks(page: Page) {
     })
   })
 
-  await page.route('**/api/auth/refresh-token', async (route) => {
+  await page.route('**/auth/refresh-token', async (route) => {
     await route.fulfill({ json: { accessToken: MOCK_JWT, refreshToken: MOCK_JWT } })
   })
 }
 
 async function loginAsOwner(page: Page) {
-  await page.goto('/login')
+  await page.goto('/login?intent=list-property')
   await page.getByTestId('email-input').fill('owner@demo.com')
   await page.getByTestId('password-input').fill('demo1234')
   await page.getByTestId('login-button').click()
@@ -242,9 +247,6 @@ test.describe('Happy Path — Owner Onboarding', () => {
     await expect(page.getByPlaceholder('Auto-filled from IFSC')).toHaveValue('HDFC Bank', { timeout: 3000 })
     await expect(page.getByText(/Connaught Place/)).toBeVisible()
 
-    await page.getByRole('button', { name: 'Verify now' }).click()
-    await expect(page.getByText('Verified', { exact: true })).toBeVisible({ timeout: 5000 })
-
     await page.locator('select[name="settlementPreference"]').selectOption('weekly')
 
     await page.locator('input[name="tdsConsent"]').check()
@@ -357,21 +359,6 @@ test.describe('Happy Path — Owner Onboarding', () => {
     await expect(page.getByText(/MG Road/)).toBeVisible()
   })
 
-  test('penny drop shows Verified badge after 2-second mock confirmation', async ({ page }) => {
-    await loginAsOwner(page)
-    await restoreAuth(page)
-    await page.goto('/owner/onboarding/step6')
-    await expectStepHeading(page, 'Bank & payouts')
-
-    await page.getByPlaceholder('HDFC0001234').fill('HDFC0001234')
-    await page.getByPlaceholder('HDFC0001234').blur()
-    await expect(page.getByPlaceholder('Auto-filled from IFSC')).toHaveValue('HDFC Bank', { timeout: 3000 })
-
-    await page.getByRole('button', { name: 'Verify now' }).click()
-    await expect(page.getByText('Verified', { exact: true })).toBeVisible({ timeout: 5000 })
-    await expect(page.getByRole('button', { name: 'Verify now' })).not.toBeVisible({ timeout: 3000 })
-  })
-
   test('step 4 with "both" policy shows Hourly rate and Full-day rate fields', async ({ page }) => {
     await loginAsOwner(page)
     await restoreAuth(page)
@@ -397,6 +384,81 @@ test.describe('Happy Path — Owner Onboarding', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 // NEGATIVE PATHS
 // ══════════════════════════════════════════════════════════════════════════════
+
+test('Step 3: wizard shell and help area stay anchored to the viewport bottom', async ({ page }) => {
+  await page.setViewportSize({ width: 1910, height: 908 })
+  await loginAsOwner(page)
+  await page.evaluate(() => {
+    history.pushState(null, '', '/owner/onboarding/step3')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  })
+  await expectStepHeading(page, 'Media & gallery')
+
+  const layout = await page.evaluate(() => {
+    const shell = document.querySelector<HTMLElement>('[data-testid="wizard-shell"]')!.getBoundingClientRect()
+    const sidebar = document.querySelector<HTMLElement>('[data-testid="wizard-sidebar"]')!.getBoundingClientRect()
+    const content = document.querySelector<HTMLElement>('[data-testid="wizard-content"]')!.getBoundingClientRect()
+    const main = document.querySelector<HTMLElement>('[data-testid="wizard-main"]')!.getBoundingClientRect()
+    const help = document.querySelector<HTMLElement>('[data-testid="wizard-help"]')!.getBoundingClientRect()
+    const footer = document.querySelector<HTMLElement>('[data-testid="wizard-footer"]')!.getBoundingClientRect()
+    return {
+      viewportHeight: window.innerHeight,
+      shellTop: shell.top,
+      shellBottom: shell.bottom,
+      sidebarBottom: sidebar.bottom,
+      contentBottom: content.bottom,
+      mainBottom: main.bottom,
+      helpBottom: help.bottom,
+      footerTop: footer.top,
+      footerBottom: footer.bottom,
+    }
+  })
+
+  expect(layout.shellTop).toBe(0)
+  expect(layout.shellBottom).toBe(layout.viewportHeight)
+  expect(layout.sidebarBottom).toBe(layout.viewportHeight)
+  expect(layout.contentBottom).toBe(layout.viewportHeight)
+  expect(layout.mainBottom).toBe(layout.footerTop)
+  expect(layout.helpBottom).toBe(layout.viewportHeight)
+  expect(layout.footerBottom).toBe(layout.viewportHeight)
+
+  const lobbyInput = page.locator('input[aria-label="Reception / lobby photo files"]')
+  const lobbyButton = page.getByRole('button', { name: 'Add Reception / lobby photos' })
+  const chooserPromise = page.waitForEvent('filechooser')
+  await lobbyButton.click()
+  const chooser = await chooserPromise
+  await chooser.setFiles({
+    name: 'lobby.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('lobby-image'),
+  })
+  await expect(lobbyInput).toBeEnabled()
+
+  const afterLobbyUpload = await page.evaluate(() => {
+    const shell = document.querySelector<HTMLElement>('[data-testid="wizard-shell"]')!.getBoundingClientRect()
+    const sidebar = document.querySelector<HTMLElement>('[data-testid="wizard-sidebar"]')!.getBoundingClientRect()
+    const content = document.querySelector<HTMLElement>('[data-testid="wizard-content"]')!.getBoundingClientRect()
+    const main = document.querySelector<HTMLElement>('[data-testid="wizard-main"]')!.getBoundingClientRect()
+    const help = document.querySelector<HTMLElement>('[data-testid="wizard-help"]')!.getBoundingClientRect()
+    const footer = document.querySelector<HTMLElement>('[data-testid="wizard-footer"]')!.getBoundingClientRect()
+    return {
+      viewportHeight: window.innerHeight,
+      shellBottom: shell.bottom,
+      sidebarBottom: sidebar.bottom,
+      contentBottom: content.bottom,
+      mainBottom: main.bottom,
+      helpBottom: help.bottom,
+      footerTop: footer.top,
+      footerBottom: footer.bottom,
+    }
+  })
+  expect(afterLobbyUpload.shellBottom).toBe(afterLobbyUpload.viewportHeight)
+  expect(afterLobbyUpload.sidebarBottom).toBe(afterLobbyUpload.viewportHeight)
+  expect(afterLobbyUpload.contentBottom).toBe(afterLobbyUpload.viewportHeight)
+  expect(afterLobbyUpload.mainBottom).toBe(afterLobbyUpload.footerTop)
+  expect(afterLobbyUpload.helpBottom).toBe(afterLobbyUpload.viewportHeight)
+  expect(afterLobbyUpload.footerBottom).toBe(afterLobbyUpload.viewportHeight)
+})
 
 test.describe('Negative Paths — Validation & Error States', () => {
 

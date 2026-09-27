@@ -1,6 +1,7 @@
 import { api } from './api'
 import { createPropertyDraft, getPropertyDraft, type PropertyDraft } from './portal-api'
 import { restorePortalSteps } from './onboarding-restore'
+import { completedOnboardingSteps } from './onboarding-validation'
 import { withMembership } from './hotel-access'
 import { queryClient } from './queryClient'
 import { useAuthStore } from '@/store/auth.store'
@@ -45,6 +46,7 @@ export async function restoreApplication(propertyId: string): Promise<PropertyDr
   const initial = useOnboardingStore.getState()
   if (initial.restoredDraftId === propertyId && initial.ownerId === user.id) return
   const draft = await getPropertyDraft(propertyId)
+  const { data: snapshot } = await api.get<PortalStepData>('/properties/' + propertyId + '/application-state')
   if (draft.propertyId !== propertyId) throw new Error('Application response did not match the selected hotel')
   if (useAuthStore.getState().user?.id !== user.id || useAuthStore.getState().user?.propertyId !== propertyId) throw new Error('Application changed while loading')
   const state = useOnboardingStore.getState()
@@ -53,14 +55,14 @@ export async function restoreApplication(propertyId: string): Promise<PropertyDr
   const stepData: PortalStepData = {}
   for (const step of [1, 2, 3, 4, 5, 6, 7] as const) {
     // Keep unsaved browser fields only when they belong to this same user's application.
-    stepData[step] = { ...remote[step], ...(same ? state.stepData[step] : {}) }
+    stepData[step] = { ...remote[step], ...snapshot[step], ...(same ? state.stepData[step] : {}) }
   }
   stepData[1] = { phone: user.phone, email: user.email, ...stepData[1] }
   const savedCompliance = draft.compliance
   const useSavedCompliance = !!savedCompliance && !(same && state.savedCompliance && !state.useSavedCompliance)
   useOnboardingStore.setState({ ownerId: user.id, draftId: propertyId, restoredDraftId: propertyId,
     stepData, savedCompliance, useSavedCompliance, onBeforeNext: null,
-    completedSteps: same ? state.completedSteps.filter(s => s !== 7) : [], currentStep: same ? state.currentStep : 1 })
+    completedSteps: completedOnboardingSteps(stepData, useSavedCompliance), currentStep: same ? state.currentStep : 1 })
   selectApplicationStatus(propertyId, draft.status)
   return draft
 }

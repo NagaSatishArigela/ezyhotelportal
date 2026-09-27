@@ -61,7 +61,8 @@ async function loginAsOwner(page: Page) {
   await page.goto('/login')
   await page.evaluate(() => localStorage.removeItem('stayflex-auth'))
   await page.goto('/login')
-  await page.getByTestId('demo-approved').click()
+  await page.getByTestId('email-input').fill('approved@demo.com')
+  await page.getByTestId('password-input').fill('demo1234')
   await page.getByTestId('login-button').click()
   await expect(page).toHaveURL('/owner/dashboard', { timeout: 5000 })
 }
