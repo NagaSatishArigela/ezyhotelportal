@@ -998,7 +998,7 @@ export function Step4LegalTax() {
             {exampleNet && exampleRoom?.hourlyRate && (
               <> At <strong>₹{exampleRoom.hourlyRate}/hr</strong>, you receive <strong>₹{exampleNet}/hr</strong> net.</>
             )}
-            {' '}Settled D+1 directly to your bank account.
+            {' '}Settled directly to your bank account.
           </p>
           <p className="text-xs text-navy-400 mt-1">
             Rate based on your <strong className="capitalize">{category}</strong> property category. Custom rates can be set by EzyHotels admin.
@@ -1335,7 +1335,7 @@ function BankForm() {
             <label className="flex items-start gap-3 cursor-pointer rounded-[10px] border border-border p-4 hover:bg-navy-50">
               <input {...register('tcAccepted')} type="checkbox" className="mt-0.5 h-4 w-4 accent-primary-600 shrink-0" />
               <span className="text-sm text-navy-600">
-                I accept EzyHotels's <a href="#" className="text-primary-600 font-semibold hover:underline">Partner Terms &amp; Conditions</a> and Commission Schedule.
+                I accept EzyHotels's <a href={`${(import.meta.env.VITE_WEB_URL || (import.meta.env.PROD ? 'https://ezyhotels.com' : 'http://localhost:3001')).replace(/\/+$/, '')}/partner-terms`} target="_blank" rel="noopener noreferrer" className="text-primary-600 font-semibold hover:underline">Partner Terms &amp; Conditions</a> and Commission Schedule.
               </span>
             </label>
             {errors.tcAccepted && <p className="text-xs text-error-500 -mt-2">{errors.tcAccepted.message}</p>}

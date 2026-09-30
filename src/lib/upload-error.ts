@@ -5,6 +5,7 @@ export class UploadError extends Error {}
 export function presignError(error: unknown): UploadError {
   if (!isAxiosError(error)) return new UploadError('Could not prepare the upload. Please try again.')
   const status = error.response?.status
+  if (status === 429) return new UploadError('Upload limit reached. Please wait before trying again. Your previously uploaded files are still saved.')
   const body = error.response?.data
   // Nest errors are wrapped by the server's HttpExceptionFilter.
   const message = body?.error?.message ?? body?.message
