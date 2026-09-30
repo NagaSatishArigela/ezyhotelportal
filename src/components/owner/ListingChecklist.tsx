@@ -24,7 +24,7 @@ export function ListingChecklist() {
     <ul className="grid gap-3 sm:grid-cols-2">{docs.map(doc => <li key={doc.id} className="flex items-center justify-between gap-3 rounded-xl bg-orange-50 px-4 py-3 text-sm">
       <span>{doc.label}</span><span className="text-xs font-semibold text-primary-700">{doc.required ? 'Required' : 'Optional'}</span>
     </li>)}</ul>
-    <p className="text-sm text-navy-600">GST is optional for listing. If you provide a GST number, keep its certificate ready. Entity documents depend on your business type. FSSAI is required when you offer restaurant, bar or room service.</p>
+    <p className="text-sm text-navy-600">GST is optional for listing. If you provide a GST number, keep its certificate ready. Entity documents depend on your business type. Fire safety and FSSAI documents are optional for submitting your listing.</p>
     <div className="rounded-xl border p-4 text-sm text-navy-600 space-y-2">
       <p><strong>Documents:</strong> PDF, JPG or PNG, up to 10 MB each.</p>
       <p><strong>Property photos:</strong> JPG, PNG or WebP, up to 10 MB each. Have clear exterior and room photos ready.</p>

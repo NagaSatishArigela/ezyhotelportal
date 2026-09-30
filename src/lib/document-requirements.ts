@@ -15,7 +15,7 @@ export function documentRequirements(entity = 'individual', hasGST = false, amen
     { id: 'cheque', type: 'cancelled_cheque', label: 'Cancelled cheque', required: true, show: true },
     { id: 'gst_cert', type: 'gstin_certificate', label: 'GST certificate', required: hasGST, show: hasGST },
     { id: 'fire_noc', type: 'fire_safety_cert', label: 'Fire safety certificate', required: false, show: true },
-    { id: 'fssai', type: 'fssai_license', label: 'FSSAI license', required: needsFssai, show: needsFssai },
+    { id: 'fssai', type: 'fssai_license', label: 'FSSAI license', required: false, show: needsFssai },
     { id: 'trade', type: 'trade_license', label: 'Trade license', required: false, show: isCompany },
     { id: 'partnership_deed', type: 'partnership_deed', label: 'Partnership deed', required: true, show: entity === 'partnership' },
     { id: 'llp_agreement', type: 'llp_agreement', label: 'LLP agreement', required: true, show: entity === 'llp' },
