@@ -106,11 +106,11 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkTokenExpiry: () => {
-        const { token, logout } = get()
+        const { token, refreshToken, logout } = get()
         if (!token) return false
         // isTokenExpired uses seconds-based JWT exp (not milliseconds like mock tokens)
         if (isTokenExpired(token)) {
-          logout()
+          if (!refreshToken) logout()
           return false
         }
         return true

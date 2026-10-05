@@ -62,7 +62,7 @@ export async function restoreApplication(propertyId: string): Promise<PropertyDr
   const useSavedCompliance = !!savedCompliance && !(same && state.savedCompliance && !state.useSavedCompliance)
   useOnboardingStore.setState({ ownerId: user.id, draftId: propertyId, restoredDraftId: propertyId,
     stepData, savedCompliance, useSavedCompliance, onBeforeNext: null,
-    completedSteps: completedOnboardingSteps(stepData, useSavedCompliance), currentStep: same ? state.currentStep : 1 })
+    completedSteps: completedOnboardingSteps(stepData, useSavedCompliance ? savedCompliance : false), currentStep: same ? state.currentStep : 1 })
   selectApplicationStatus(propertyId, draft.status)
   return draft
 }

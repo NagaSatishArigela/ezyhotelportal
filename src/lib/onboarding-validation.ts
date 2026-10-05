@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { PortalStepData } from './onboarding-mapping'
 import { documentRequirements } from './document-requirements'
+import { propertyDetailsErrors, requiredBookingPolicy } from './property-details'
 
 export const step1Schema = z.object({
   ownerName:        z.string().min(2, 'At least 2 characters'),
@@ -16,6 +17,7 @@ export type Step1Data = z.infer<typeof step1Schema>
 export const step2Schema = z.object({
   propertyName:        z.string().min(2, 'Required'),
   propertyType:        z.string().min(1, 'Select a type'),
+  detailsByType: z.record(z.string(), z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]))).optional(),
   address:             z.string().min(5, 'Required'),
   addressLine2:        z.string().min(5, 'At least 5 characters').max(300, 'Max 300 characters'),
   latitude:            z.number().min(-90, 'Invalid latitude').max(90, 'Invalid latitude'),
@@ -29,6 +31,10 @@ export const step2Schema = z.object({
   minBookingHours:     z.number().min(1).max(6),
   defaultCheckinTime:  z.string(),
   defaultCheckoutTime: z.string(),
+}).superRefine((data, context) => {
+  const policy = requiredBookingPolicy(data.propertyType)
+  if (policy && data.bookingPolicy !== policy) context.addIssue({ code: z.ZodIssueCode.custom, path: ['bookingPolicy'], message: policy === 'fullday' ? 'PG supports full-day bookings only' : 'Banquets support hourly bookings only' })
+  for (const message of propertyDetailsErrors(data.propertyType, data.detailsByType?.[data.propertyType] ?? {})) context.addIssue({ code: z.ZodIssueCode.custom, path: ['detailsByType'], message })
 })
 export type Step2Data = z.infer<typeof step2Schema>
 
@@ -99,7 +105,7 @@ export const step6Schema = z.object({
   accountNumber:        z.string().min(9, 'Invalid account number').max(18),
   ifscCode:             z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC format'),
   bankName:             z.string().min(2, 'Required'),
-  accountType:          z.enum(['savings', 'current']),
+  accountType:          z.enum(['savings', 'current', 'cash_credit', 'other']),
   pan:                  z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN (e.g. ABCDE1234F)'),
   settlementPreference: z.enum(['d1', 'weekly']),
   tdsConsent:           z.boolean(),
@@ -109,7 +115,7 @@ export const step6Schema = z.object({
 export type Step6Data = z.infer<typeof step6Schema>
 
 /** Use the screen validators for both restored progress and review indicators. */
-export function completedOnboardingSteps(data: PortalStepData, savedCompliance = false, submitted = false): number[] {
+export function completedOnboardingSteps(data: PortalStepData, savedCompliance: boolean | { documents: Array<{ type: string }> } = false, submitted = false): number[] {
   const rooms = data[4]
   const seating = data[4]?.seatingCapacity
   const complete = [
@@ -117,8 +123,10 @@ export function completedOnboardingSteps(data: PortalStepData, savedCompliance =
     step2Schema.safeParse(data[2]).success,
     photosGateSchema.safeParse(data[3]?.photos).success,
     step4Schema.safeParse(rooms).success && (data[2]?.propertyType !== 'banquet' || (typeof seating === 'number' && seating >= 50 && seating <= 5000)),
-    savedCompliance || (docsGateSchema.safeParse(data[5]?.documents).success && requiredDocumentsPresent(data)),
-    savedCompliance || step6Schema.safeParse(data[6]).success,
+    typeof savedCompliance === 'object'
+      ? requiredDocumentsPresent({ ...data, 5: { documents: savedCompliance.documents } })
+      : savedCompliance || (docsGateSchema.safeParse(data[5]?.documents).success && requiredDocumentsPresent(data)),
+    !!savedCompliance || step6Schema.safeParse(data[6]).success,
     submitted,
   ]
   return complete.flatMap((done, index) => done ? [index + 1] : [])

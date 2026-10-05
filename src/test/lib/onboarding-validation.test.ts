@@ -32,6 +32,8 @@ it.each(['restaurant', 'bar', 'room_service'])('completes PG documents without o
     5: { documents: [
       { type: 'pan_card', url: 'https://files.test/pan.pdf' },
       { type: 'id_proof', url: 'https://files.test/id.pdf' },
+      { type: 'id_proof_back', url: 'https://files.test/id-back.pdf' },
+      { type: 'trade_license', url: 'https://files.test/business.pdf' },
       { type: 'rental_agreement', url: 'https://files.test/lease.pdf' },
       { type: 'cancelled_cheque', url: 'https://files.test/cheque.pdf' },
     ] },
@@ -55,6 +57,8 @@ it('accepts document payloads without an optional fire safety certificate', () =
       documents: [
         { type: 'pan_card', url: 'https://files.test/pan.pdf' },
         { type: 'id_proof', url: 'https://files.test/id.pdf' },
+        { type: 'id_proof_back', url: 'https://files.test/id-back.pdf' },
+        { type: 'trade_license', url: 'https://files.test/business.pdf' },
         { type: 'rental_agreement', url: 'https://files.test/lease.pdf' },
         { type: 'cancelled_cheque', url: 'https://files.test/cheque.pdf' },
       ],

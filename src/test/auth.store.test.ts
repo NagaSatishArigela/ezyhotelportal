@@ -71,6 +71,14 @@ describe('auth.store', () => {
     expect(useAuthStore.getState().user?.onboardingStep).toBe(1)
   })
 
+  it('keeps an expired access session available for renewal', () => {
+    const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 60 }))
+    useAuthStore.getState().setAuth(mockOwner, `header.${payload}.signature`, false, 'refresh')
+    expect(useAuthStore.getState().checkTokenExpiry()).toBe(false)
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(useAuthStore.getState().refreshToken).toBe('refresh')
+  })
+
   it('updateOnboardingStatus when user is null keeps null', () => {
     useAuthStore.getState().updateOnboardingStatus('submitted', 3)
     expect(useAuthStore.getState().user).toBeNull()
