@@ -238,8 +238,8 @@ const PHOTO_CATEGORIES = new Set<ServerPhoto['category']>([
 // Contract §3 DocumentType enum — filtered defensively so only valid types
 // reach the server (portal maps docId → DocumentType before storing).
 const DOCUMENT_TYPES = new Set([
-  'owner_photo', 'id_proof', 'id_proof_back', 'udyam_certificate', 'pan_card', 'gstin_certificate', 'rental_agreement',
-  'fire_safety_cert', 'fssai_license', 'trade_license', 'partnership_deed',
+  'owner_photo', 'id_proof', 'id_proof_back', 'pan_card', 'gstin_certificate', 'rental_agreement',
+  'fire_safety_cert', 'fssai_license', 'trade_license', 'udyam_certificate', 'partnership_deed',
   'incorporation_certificate', 'board_resolution', 'llp_agreement',
   'cancelled_cheque', 'other',
 ])
