@@ -13,6 +13,7 @@ export function restorePortalSteps(draft: PropertyDraft): PortalStepData {
     1: present({ ownerName: one.ownerFirstName ? [one.ownerFirstName, one.ownerMiddleName, one.ownerLastName].filter(Boolean).join(' ') : undefined,
       businessEntity: one.businessEntity, propertyCategory: one.category, businessName: draft.compliance?.legalBusinessName }),
     2: present({ propertyName: one.propertyName, propertyType: one.propertyType, bookingPolicy: one.bookingPolicy, description: one.description,
+      detailsByType: one.propertyType && one.propertyDetails ? { [one.propertyType]: one.propertyDetails } : undefined,
       address: two.addressLine1, addressLine2: two.addressLine2, latitude: two.latitude, longitude: two.longitude,
       city: two.city, state: two.state, pincode: two.pincode, amenities: three.amenities,
       minBookingHours: three.minBookingHours === undefined ? undefined : Number(three.minBookingHours),
@@ -21,6 +22,6 @@ export function restorePortalSteps(draft: PropertyDraft): PortalStepData {
     4: present({ rooms: three.rooms?.map((room, i) => ({ ...room, id: draft.propertyId + '-room-' + i,
       name: room.type ? room.type.toUpperCase() + ' room' : 'Room', bedType: '', amenities: [] })),
       houseRules: three.houseRules, seatingCapacity: three.seatingCapacity }),
-    6: present({ accountHolderName: draft.compliance?.accountHolderName, ifscCode: draft.compliance?.ifsc }),
+    6: present({ accountHolderName: draft.compliance?.accountHolderName, ifscCode: draft.compliance?.ifsc, accountType: draft.compliance?.accountType }),
   }
 }

@@ -1,6 +1,7 @@
 import { useOnboardingStore } from '@/store/onboarding.store'
 import { queryClient } from '@/lib/queryClient'
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -35,6 +36,16 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
   const [showPwd, setShowPwd] = useState(false)
   const [shaking, setShaking] = useState(false)
   const [apiError, setApiError] = useState(false)
+  const [retryAt, setRetryAt] = useState(0)
+  const [retrySeconds, setRetrySeconds] = useState(0)
+
+  useEffect(() => {
+    if (!retryAt) return
+    const tick = () => setRetrySeconds(Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)))
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [retryAt])
 
   const {
     register,
@@ -58,6 +69,7 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
   }, [errors, apiError])
 
   const onSubmit = async ({ email, password, rememberMe }: LoginForm) => {
+    if (Date.now() < retryAt) return
     try {
       const { user, token, refreshToken } = await portalLogin(email, password)
       if (useAuthStore.getState().user?.id !== user.id) useOnboardingStore.getState().reset()
@@ -71,7 +83,18 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
 
       navigate({ to: listingProperty ? '/list-property' : '/owner/access' })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Login failed')
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const value = err.response.headers['retry-after']
+        const seconds = Number(value)
+        const delay = Number.isFinite(seconds) && seconds > 0
+          ? seconds * 1000 : Date.parse(String(value)) - Date.now()
+        const wait = Number.isFinite(delay) && delay > 0 ? delay : 60_000
+        setRetryAt(Date.now() + wait)
+        setRetrySeconds(Math.ceil(wait / 1000))
+        toast.error('Too many sign-in attempts. Please wait before trying again.')
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Login failed')
+      }
       setApiError(true)
     }
   }
@@ -155,10 +178,11 @@ export function LoginPage({ listingProperty = false }: { listingProperty?: boole
               type="submit"
               block
               loading={isSubmitting}
+              disabled={retrySeconds > 0}
               className="mt-1"
               data-testid="login-button"
             >
-              Sign in
+              {retrySeconds > 0 ? `Try again in ${retrySeconds}s` : 'Sign in'}
             </Button>
           </form>
 

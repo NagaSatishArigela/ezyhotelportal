@@ -162,6 +162,7 @@ export function latestRevisionItems(revisionNotes: unknown): RevisionItem[] {
 }
 
 export interface DraftCompliance {
+  accountType?: string
   legalBusinessName: string
   gstinMasked: string | null
   panMasked: string

@@ -109,7 +109,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       saveStepData: (step, data) =>
         set((s) => {
           const stepData = { ...s.stepData, [step]: data }
-          return { stepData, completedSteps: completedOnboardingSteps(stepData, s.useSavedCompliance && !!s.savedCompliance, s.completedSteps.includes(7)) }
+          return { stepData, completedSteps: completedOnboardingSteps(stepData, s.useSavedCompliance ? s.savedCompliance ?? false : false, s.completedSteps.includes(7)) }
         }),
       setOnBeforeNext: (fn) => set({ onBeforeNext: fn }),
       reset: () => set(state => ({ ...initialState, selectionVersion: state.selectionVersion + 1, onBeforeNext: null })),

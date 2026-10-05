@@ -1,4 +1,8 @@
+import { PROPERTY_TYPE_OPTIONS, requiredBookingPolicy } from '@/lib/property-details'
 import { SavedCompliance } from '@/components/owner/SavedCompliance'
+import { AmenityPicker } from '@/components/owner/AmenityPicker'
+import { PropertyDetailsFields } from '@/components/owner/PropertyDetailsFields'
+import { PropertyDetailsSummary } from '@/components/owner/PropertyDetailsSummary'
 import { documentRequirements, type DocumentType } from '@/lib/document-requirements'
 import { submitApplication } from '@/lib/onboarding-session'
 import { saveApplicationProgress } from '@/lib/save-application'
@@ -9,8 +13,8 @@ import { step1Schema, step2Schema, photosGateSchema, step4Schema, docsGateSchema
 import { toast } from 'sonner'
 import {
   Building2, Camera, CheckCircle, CreditCard, FileText, Home,
-  IndianRupee, MapPin, Shield, Upload, Wifi, Car, Waves, Dumbbell,
-  Utensils, Phone, Trash2, Plus, Search, Loader2, CheckCheck,
+  IndianRupee, MapPin, Shield, Upload, Waves,
+  Trash2, Plus, Search, Loader2,
   ChevronDown, Star, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -236,38 +240,19 @@ export function Step1PropertyDetails() {
 
 // ── Step 2 — Property details + amenities + policy ──────────────────────────
 
-const PROPERTY_TYPES = [
-  { value: 'hotel',    label: 'Hotel',    icon: Building2 },
-  { value: 'resort',   label: 'Resort',   icon: Waves },
-  { value: 'homestay', label: 'Homestay', icon: Home },
-  { value: 'villa',    label: 'Villa',    icon: Building2 },
-  { value: 'pg',       label: 'PG',       icon: Home },
-  { value: 'farm',     label: 'Farm',     icon: Home },
-  { value: 'banquet',  label: 'Banquet',  icon: Building2 },
-  { value: 'other',    label: 'Other',    icon: Building2 },
-]
-
-const AMENITIES_LIST = [
-  { id: 'wifi',         label: 'WiFi',              icon: Wifi },
-  { id: 'ac',           label: 'Air conditioning',  icon: null },
-  { id: 'parking',      label: 'Parking',           icon: Car },
-  { id: 'pool',         label: 'Swimming pool',     icon: Waves },
-  { id: 'gym',          label: 'Gym / Fitness',     icon: Dumbbell },
-  { id: 'restaurant',   label: 'Restaurant',        icon: Utensils },
-  { id: 'bar',          label: 'Bar / Lounge',      icon: null },
-  { id: 'spa',          label: 'Spa',               icon: null },
-  { id: 'reception_24', label: '24hr Reception',    icon: Phone },
-  { id: 'room_service', label: 'Room service',      icon: null },
-  { id: 'laundry',      label: 'Laundry',           icon: null },
-  { id: 'conference',   label: 'Conference room',   icon: null },
-  { id: 'rooftop',      label: 'Rooftop access',    icon: null },
-  { id: 'couples',      label: 'Couples welcome',   icon: null },
-  { id: 'pets',         label: 'Pets allowed',      icon: null },
-  { id: 'wheelchair',   label: 'Wheelchair access', icon: null },
-  { id: 'cctv',         label: 'CCTV security',     icon: Shield },
-  { id: 'ev_charging',  label: 'EV charging',       icon: null },
-]
-
+const PROPERTY_TYPE_ICONS: Record<string, React.ElementType> = {
+  hotel: Building2,
+  resort: Waves,
+  villa: Building2,
+  guest_house: Home,
+  farm: Home,
+  homestay: Home,
+  pg: Home,
+  lodge: Building2,
+  dormitory: Home,
+  banquet: Building2,
+  other: Building2,
+}
 
 export function Step2RoomsPricing() {
   const stored = useOnboardingStore((s) => s.stepData[2] as Partial<Step2Data> | undefined)
@@ -276,6 +261,7 @@ export function Step2RoomsPricing() {
     defaultValues: {
       propertyName: stored?.propertyName ?? '',
       propertyType: stored?.propertyType ?? 'hotel',
+      detailsByType: stored?.detailsByType ?? {},
       address: stored?.address ?? '',
       addressLine2: stored?.addressLine2 ?? '',
       latitude: stored?.latitude ?? 20.5937,
@@ -300,6 +286,11 @@ export function Step2RoomsPricing() {
   const amenities = watch('amenities')
   const propertyType = watch('propertyType')
   const bookingPolicy = watch('bookingPolicy')
+  const detailsByType = watch('detailsByType') ?? {}
+  const fixedBookingPolicy = requiredBookingPolicy(propertyType)
+  useEffect(() => {
+    if (fixedBookingPolicy && bookingPolicy !== fixedBookingPolicy) setValue('bookingPolicy', fixedBookingPolicy, { shouldDirty: true, shouldValidate: true })
+  }, [fixedBookingPolicy, bookingPolicy, setValue])
 
   const fetchPincode = useCallback(async (pin: string) => {
     if (pin.length !== 6) return
@@ -310,11 +301,6 @@ export function Step2RoomsPricing() {
     } catch { /* ignore */ }
     finally { setPincodeLoading(false) }
   }, [setValue])
-
-  const toggleAmenity = (id: string) => {
-    const current = amenities ?? []
-    setValue('amenities', current.includes(id) ? current.filter((a) => a !== id) : [...current, id])
-  }
 
   const BOOKING_POLICIES = [
     { value: 'hourly',  label: 'Hourly only',           desc: 'Guests book by the hour (min 1–6h)' },
@@ -338,19 +324,22 @@ export function Step2RoomsPricing() {
           <div>
             <p className="text-sm font-semibold text-navy-700 mb-2">Property type <span className="text-error-500">*</span></p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {PROPERTY_TYPES.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setValue('propertyType', value)}
-                  className={cn(
-                    'rounded-[10px] border p-3 text-xs font-semibold text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600',
-                    propertyType === value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-border text-navy-600 hover:border-navy-300'
-                  )}
-                >
-                  <Icon className="mx-auto mb-1" size={16} aria-hidden />{label}
-                </button>
-              ))}
+              {PROPERTY_TYPE_OPTIONS.map(({ value, label }) => {
+                const Icon = PROPERTY_TYPE_ICONS[value]
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setValue('propertyType', value)}
+                    className={cn(
+                      'rounded-[10px] border p-3 text-xs font-semibold text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600',
+                      propertyType === value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-border text-navy-600 hover:border-navy-300'
+                    )}
+                  >
+                    <Icon className="mx-auto mb-1" size={16} aria-hidden />{label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -432,6 +421,8 @@ export function Step2RoomsPricing() {
       </TwoCol>
 
       {/* Amenities */}
+      <PropertyDetailsFields placement="before" propertyType={propertyType} value={detailsByType[propertyType] ?? {}}
+        onChange={next => setValue('detailsByType', { ...detailsByType, [propertyType]: next }, { shouldDirty: true, shouldValidate: true })} />
       <Card>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -443,33 +434,18 @@ export function Step2RoomsPricing() {
           </Badge>
         </div>
         {errors.amenities && <p className="text-xs text-error-500 mb-3">{errors.amenities.message}</p>}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {AMENITIES_LIST.map(({ id, label, icon: Icon }) => {
-            const checked = amenities.includes(id)
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => toggleAmenity(id)}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-[10px] border px-3 py-2.5 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600',
-                  checked ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold' : 'border-border text-navy-600 hover:border-navy-300'
-                )}
-              >
-                {checked ? <CheckCheck size={14} className="shrink-0 text-primary-600" /> : (Icon ? <Icon size={14} className="shrink-0 text-navy-400" /> : <div className="w-[14px] h-[14px] shrink-0" />)}
-                <span className="text-xs">{label}</span>
-              </button>
-            )
-          })}
-        </div>
+        <AmenityPicker propertyType={propertyType} value={amenities}
+          onChange={next => setValue('amenities', next, { shouldDirty: true, shouldValidate: true })} />
       </Card>
 
       {/* Booking policy */}
+      <PropertyDetailsFields placement="after" propertyType={propertyType} value={detailsByType[propertyType] ?? {}}
+        onChange={next => setValue('detailsByType', { ...detailsByType, [propertyType]: next }, { shouldDirty: true, shouldValidate: true })} />
       <Card>
         <h2 className="font-display font-bold text-navy-900 mb-1">Booking policy</h2>
         <p className="text-xs text-navy-500 mb-4">This controls what pricing options guests see. You can change this later.</p>
         <div className="grid gap-3 sm:grid-cols-3">
-          {BOOKING_POLICIES.map(({ value, label, desc }) => (
+          {BOOKING_POLICIES.filter(policy => !fixedBookingPolicy || policy.value === fixedBookingPolicy).map(({ value, label, desc }) => (
             <button
               key={value}
               type="button"
@@ -942,7 +918,8 @@ export function Step4LegalTax() {
 
   const [rooms, setRooms] = useState<RoomData[]>(stored?.rooms as RoomData[] ?? DEFAULT_ROOMS)
   const [seatingCapacity, setSeatingCapacity] = useState<number | undefined>(
-    (stored as { seatingCapacity?: number } | undefined)?.seatingCapacity,
+    typeof step2Data?.detailsByType?.banquet?.seatingCapacity === 'number'
+      ? step2Data.detailsByType.banquet.seatingCapacity : stored?.seatingCapacity,
   )
   const [houseRules, setHouseRules] = useState<HouseRulesData>(
     (stored as { houseRules?: HouseRulesData } | undefined)?.houseRules ?? DEFAULT_HOUSE_RULES,
@@ -1041,7 +1018,14 @@ export function Step4LegalTax() {
               min={50}
               max={5000}
               value={seatingCapacity ?? ''}
-              onChange={(e) => setSeatingCapacity(e.target.value === '' ? undefined : Number(e.target.value))}
+              onChange={(e) => {
+                const capacity = e.target.value === '' ? undefined : Number(e.target.value)
+                setSeatingCapacity(capacity)
+                const details = { ...step2Data?.detailsByType?.banquet }
+                if (capacity === undefined) delete details.seatingCapacity
+                else details.seatingCapacity = capacity
+                useOnboardingStore.getState().saveStepData(2, { ...step2Data, detailsByType: { ...step2Data?.detailsByType, banquet: details } })
+              }}
               className="w-48"
               placeholder="e.g. 250"
             />
@@ -1154,8 +1138,8 @@ function DocumentsForm() {
             <p className="text-sm font-semibold text-navy-900 mb-2">Required for {entity === 'individual' ? 'individuals' : 'companies'}</p>
             <p className="text-xs text-navy-500">
               {isCompany
-                ? 'Company registrations need company PAN, ownership proof, and entity registration documents. GST is optional; provide its certificate if you entered a GST number.'
-                : 'Individual listings need personal PAN, Aadhaar, and property ownership documents.'}
+                ? 'Company registrations need company PAN, Aadhaar front and back, business licence, ownership proof, cancelled cheque, and entity registration documents. GST and Udyam certificates are optional.'
+                : 'Individual listings need PAN, Aadhaar front and back, business licence, ownership proof, and a cancelled cheque. GST and Udyam certificates are optional.'}
             </p>
             <div className="mt-3 flex items-center gap-2">
               <div className="h-1.5 flex-1 bg-navy-100 rounded-full overflow-hidden">
@@ -1171,7 +1155,7 @@ function DocumentsForm() {
             <div key={id} className="space-y-1">
               <DocumentUploader
                 label={label}
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept={id === 'owner_photo' ? '.jpg,.jpeg,.png' : '.pdf,.jpg,.jpeg,.png'}
                 maxSizeMB={10}
                 required={req}
                 value={urls[id]}
@@ -1272,6 +1256,8 @@ function BankForm() {
               <Select {...register('accountType')}>
                 <option value="savings">Savings account</option>
                 <option value="current">Current account</option>
+                <option value="cash_credit">Cash Credit (Loan)</option>
+                <option value="other">Other Account</option>
               </Select>
             </FieldWrapper>
             <FieldWrapper label="Account number" required error={errors.accountNumber?.message} className="sm:col-span-2">
@@ -1398,7 +1384,7 @@ export function Step7ReviewSubmit() {
 
   const commission = COMMISSION_BY_CATEGORY[s1?.propertyCategory ?? 'mid'] ?? PLATFORM_COMMISSION
 
-  const completed = completedOnboardingSteps(stepData, !!savedCompliance)
+  const completed = completedOnboardingSteps(stepData, savedCompliance ?? false)
   const CHECKLIST = [
     {
       step: 1, icon: Home, label: 'Owner identity',
@@ -1474,8 +1460,9 @@ export function Step7ReviewSubmit() {
   }
 
   const estimatedEarning = (() => {
+    if (s2?.bookingPolicy === 'fullday') return null
     const rooms = s4?.rooms ?? []
-    if (!rooms.length) return null
+    if (!rooms.some(room => room.hourlyRate)) return null
     const avgHourly = rooms.reduce((sum, r) => sum + (r.hourlyRate ?? 0), 0) / rooms.filter((r) => r.hourlyRate).length
     const net = avgHourly * (1 - commission / 100)
     return { gross: Math.round(avgHourly), net: Math.round(net) }
@@ -1484,6 +1471,7 @@ export function Step7ReviewSubmit() {
   return (
     <div className="space-y-6">
       <StepHeader step={7} title="Review & submit" subtitle="One final check before the EzyHotels verification team reviews your listing." />
+      <PropertyDetailsSummary propertyType={s2?.propertyType ?? ''} value={s2?.detailsByType?.[s2?.propertyType ?? '']} />
 
       {/* Earnings summary */}
       {estimatedEarning && (

@@ -1,4 +1,5 @@
 import { FilePreview } from '@/components/shared/FilePreview'
+import { PropertyDetailsSummary } from '@/components/owner/PropertyDetailsSummary'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -175,6 +176,7 @@ function PropertyDetailDialog({ propertyId, onClose }: { propertyId: string; onC
               </div>
             </div>
 
+            <PropertyDetailsSummary propertyType={property.propertyType ?? ''} value={property.propertyDetails} />
             {detail.roomTypes.length > 0 && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-navy-500 mb-2">Room types</p>

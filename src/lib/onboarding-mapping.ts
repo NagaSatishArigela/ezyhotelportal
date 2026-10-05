@@ -16,6 +16,9 @@
 
 // ── Accumulated portal stepData (matches onboarding.store) ───────────────────
 
+import { AMENITY_IDS, normalizeAmenity } from './amenity-catalog'
+import { requiredBookingPolicy, type PropertyDetails } from './property-details'
+
 export type PortalStepData = Partial<
   Record<1 | 2 | 3 | 4 | 5 | 6 | 7, Record<string, unknown>>
 >
@@ -29,6 +32,7 @@ interface PortalStep1 {
   propertyCategory?: string
 }
 interface PortalStep2 {
+  detailsByType?: Record<string, PropertyDetails>
   propertyName?: string
   propertyType?: string
   address?: string
@@ -88,6 +92,7 @@ interface PortalStep4 {
   houseRules?: PortalHouseRules
 }
 interface PortalStep6 {
+  accountType?: string
   accountHolderName?: string
   accountNumber?: string
   ifscCode?: string
@@ -99,6 +104,7 @@ interface PortalStep6 {
 // ── Server payload shapes (exact contract field names) ───────────────────────
 
 export interface ServerStep1Payload {
+  propertyDetails?: PropertyDetails
   propertyName?: string
   propertyType?: string
   bookingPolicy?: string
@@ -162,6 +168,7 @@ export interface ServerDocument {
   expiresAt?: string
 }
 export interface ServerStep5Payload {
+  accountType?: string
   gstin?: string
   legalBusinessName?: string
   pan?: string
@@ -186,6 +193,9 @@ const PROPERTY_TYPE_MAP: Record<string, string> = {
   villa: 'villa',
   pg: 'pg',
   farm: 'farm',
+  guest_house: 'guest_house',
+  lodge: 'lodge',
+  dormitory: 'dormitory',
   banquet: 'banquet',
   other: 'other',
 }
@@ -217,13 +227,8 @@ const HOUSE_RULE_ENUMS: Record<string, Set<string>> = {
   id_proof_required: new Set(['yes', 'no']),
 }
 
-// Contract §2 canonical amenity vocabulary — the portal picker already uses
-// these ids, but we filter to the frozen set defensively.
-const CANONICAL_AMENITIES = new Set([
-  'wifi', 'ac', 'parking', 'pool', 'gym', 'restaurant', 'bar', 'spa',
-  'reception_24', 'room_service', 'laundry', 'conference', 'rooftop',
-  'couples', 'pets', 'wheelchair', 'cctv', 'ev_charging',
-])
+// Includes retired IDs so editing existing drafts does not discard selections.
+const CANONICAL_AMENITIES = new Set(AMENITY_IDS)
 
 // Contract §Step 4 Photo.category vocabulary.
 const PHOTO_CATEGORIES = new Set<ServerPhoto['category']>([
@@ -233,7 +238,7 @@ const PHOTO_CATEGORIES = new Set<ServerPhoto['category']>([
 // Contract §3 DocumentType enum — filtered defensively so only valid types
 // reach the server (portal maps docId → DocumentType before storing).
 const DOCUMENT_TYPES = new Set([
-  'owner_photo', 'id_proof', 'pan_card', 'gstin_certificate', 'rental_agreement',
+  'owner_photo', 'id_proof', 'id_proof_back', 'udyam_certificate', 'pan_card', 'gstin_certificate', 'rental_agreement',
   'fire_safety_cert', 'fssai_license', 'trade_license', 'partnership_deed',
   'incorporation_certificate', 'board_resolution', 'llp_agreement',
   'cancelled_cheque', 'other',
@@ -276,7 +281,8 @@ export function mapStep1(data: PortalStepData): ServerStep1Payload {
   if (s2.propertyType && PROPERTY_TYPE_MAP[s2.propertyType]) {
     out.propertyType = PROPERTY_TYPE_MAP[s2.propertyType]
   }
-  putStr(out, 'bookingPolicy', s2.bookingPolicy)
+  putStr(out, 'bookingPolicy', requiredBookingPolicy(s2.propertyType ?? '') ?? s2.bookingPolicy)
+  out.propertyDetails = s2.detailsByType?.[s2.propertyType ?? ''] ?? {}
   if (s1.businessEntity && BUSINESS_ENTITY_MAP[s1.businessEntity]) {
     out.businessEntity = BUSINESS_ENTITY_MAP[s1.businessEntity]
   }
@@ -322,8 +328,8 @@ export function mapStep3(data: PortalStepData): ServerStep3Payload {
       }
       if (typeof r.count === 'number') room.count = r.count
       if (typeof r.maxOccupancy === 'number') room.maxOccupancy = r.maxOccupancy
-      if (typeof r.hourlyRate === 'number') room.hourlyRate = r.hourlyRate
-      if (typeof r.fulldayRate === 'number') room.fulldayRate = r.fulldayRate
+      if (s2.propertyType !== 'pg' && typeof r.hourlyRate === 'number') room.hourlyRate = r.hourlyRate
+      if (s2.propertyType !== 'banquet' && typeof r.fulldayRate === 'number') room.fulldayRate = r.fulldayRate
       return room
     })
   }
@@ -340,9 +346,11 @@ export function mapStep3(data: PortalStepData): ServerStep3Payload {
   if (typeof s4.seatingCapacity === 'number' && Number.isFinite(s4.seatingCapacity)) {
     out.seatingCapacity = s4.seatingCapacity
   }
+  const banquetSeating = s2.detailsByType?.banquet?.seatingCapacity
+  if (s2.propertyType === 'banquet' && typeof banquetSeating === 'number') out.seatingCapacity = banquetSeating
 
   if (Array.isArray(s2.amenities)) {
-    const ids = s2.amenities.filter((a) => CANONICAL_AMENITIES.has(a))
+    const ids = [...new Set(s2.amenities.map(normalizeAmenity).filter((a) => CANONICAL_AMENITIES.has(a)))]
     if (ids.length > 0) out.amenities = ids
   }
 
@@ -423,6 +431,7 @@ export function mapStep5(data: PortalStepData): ServerStep5Payload {
     out.ifsc = s6.ifscCode.trim().toUpperCase()
   }
   putStr(out, 'accountHolderName', s6.accountHolderName)
+  putStr(out, 'accountType', s6.accountType)
   if (s6.tcAccepted === true) out.tcAccepted = true
   if (s6.formCAcknowledged === true) out.formCAcknowledged = true
 

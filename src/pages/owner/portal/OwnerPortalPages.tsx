@@ -809,7 +809,7 @@ export function OwnerSettingsPage() {
           </div>
         </SectionCard>
         <SectionCard title="Public listing">
-          <label className="flex items-center justify-between rounded-[10px] border border-border p-3 font-semibold text-navy-700 cursor-pointer hover:bg-navy-50 transition-colors">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border p-3 font-semibold text-navy-700">
             <span>
               {active ? 'Listing is live' : 'Listing is paused'}
               <span className="block text-xs font-normal text-navy-400">
@@ -818,13 +818,26 @@ export function OwnerSettingsPage() {
                   : 'Hidden from the storefront — no new bookings.'}
               </span>
             </span>
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-              className="h-5 w-5 accent-primary-600"
-            />
-          </label>
+            <div role="group" aria-label="Public listing status" className="flex gap-3">
+              {[true, false].map((enabled) => (
+                <button
+                  key={String(enabled)}
+                  type="button"
+                  aria-pressed={active === enabled}
+                  disabled={save.isPending}
+                  onClick={() => setActive(enabled)}
+                  className={`rounded-full border-2 px-6 py-2 text-lg font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 ${
+                    active === enabled
+                      ? enabled ? 'border-green-600 bg-green-600 text-white' : 'border-red-600 bg-red-600 text-white'
+                      : 'border-navy-200 bg-white text-navy-400'
+                  }`}
+                >
+                  {enabled ? 'ON' : 'OFF'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-navy-500">Select ON or OFF, then save changes to update your public listing.</p>
         </SectionCard>
       </div>
     </div>

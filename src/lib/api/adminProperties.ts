@@ -71,6 +71,7 @@ export interface AdminPropertyDetail {
     revisionCount: number
     revisionNotes: unknown
     propertyType: string | null
+    propertyDetails?: Record<string, unknown> | null
     bookingPolicy: string | null
     category: string | null
     description: string | null
