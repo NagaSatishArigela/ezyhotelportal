@@ -1,3 +1,4 @@
+import type { DormitoryDetails, OtherAccommodation } from '@/lib/accommodation'
 import { api } from '@/lib/api'
 
 export type PropertyStatus =
@@ -27,6 +28,7 @@ export interface PropertyQueueResult {
 }
 
 export interface RoomType {
+  dormitory?: DormitoryDetails | null
   id: string
   type: string
   count: number
@@ -70,6 +72,9 @@ export interface AdminPropertyDetail {
     submittedAt: string | null
     revisionCount: number
     revisionNotes: unknown
+    otherAccommodation?: OtherAccommodation | null
+    receptionMobile?: string | null
+    receptionLandline?: string | null
     propertyType: string | null
     bookingPolicy: string | null
     category: string | null

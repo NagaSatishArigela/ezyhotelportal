@@ -1,3 +1,6 @@
+import { receptionContactSchema } from './reception-contact'
+import { dormitorySchema, otherAccommodationSchema, type DormitoryDetails, type OtherAccommodation } from './accommodation'
+
 /**
  * onboarding-mapping.ts — pure mapping layer between the 7-step portal wizard
  * (`onboarding.store.stepData`) and the FROZEN 5-step server contract
@@ -29,8 +32,11 @@ interface PortalStep1 {
   propertyCategory?: string
 }
 interface PortalStep2 {
+  receptionMobile?: string
+  receptionLandline?: string
   propertyName?: string
   propertyType?: string
+  otherAccommodation?: Partial<OtherAccommodation>
   address?: string
   addressLine2?: string
   latitude?: number
@@ -64,6 +70,7 @@ interface PortalStep5 {
   documents?: PortalDocument[]
 }
 interface PortalRoom {
+  dormitory?: Partial<DormitoryDetails>
   type?: string
   count?: number
   maxOccupancy?: number
@@ -99,6 +106,9 @@ interface PortalStep6 {
 // ── Server payload shapes (exact contract field names) ───────────────────────
 
 export interface ServerStep1Payload {
+  receptionMobile?: string
+  receptionLandline?: string | null
+  otherAccommodation?: OtherAccommodation
   propertyName?: string
   propertyType?: string
   bookingPolicy?: string
@@ -120,6 +130,7 @@ export interface ServerStep2Payload {
   specialNote?: string
 }
 export interface ServerStep3Room {
+  dormitory?: DormitoryDetails
   type?: 'ac' | 'nonac' | 'dorm' | 'suite'
   count?: number
   maxOccupancy?: number
@@ -184,6 +195,9 @@ const PROPERTY_TYPE_MAP: Record<string, string> = {
   resort: 'resort',
   homestay: 'homestay',
   villa: 'villa',
+  guest_house: 'guest_house',
+  lodge: 'lodge',
+  dormitory: 'dormitory',
   pg: 'pg',
   farm: 'farm',
   banquet: 'banquet',
@@ -273,8 +287,17 @@ export function mapStep1(data: PortalStepData): ServerStep1Payload {
   const out: ServerStep1Payload = {}
 
   putStr(out, 'propertyName', s2.propertyName)
+  const contacts = receptionContactSchema.safeParse({ receptionMobile: s2.receptionMobile ?? '', receptionLandline: s2.receptionLandline ?? '' })
+  if (contacts.success) {
+    out.receptionMobile = contacts.data.receptionMobile
+    out.receptionLandline = contacts.data.receptionLandline || null
+  }
   if (s2.propertyType && PROPERTY_TYPE_MAP[s2.propertyType]) {
     out.propertyType = PROPERTY_TYPE_MAP[s2.propertyType]
+  }
+  if (s2.propertyType === 'other') {
+    const details = otherAccommodationSchema.safeParse(s2.otherAccommodation)
+    if (details.success) out.otherAccommodation = details.data
   }
   putStr(out, 'bookingPolicy', s2.bookingPolicy)
   if (s1.businessEntity && BUSINESS_ENTITY_MAP[s1.businessEntity]) {
@@ -319,6 +342,11 @@ export function mapStep3(data: PortalStepData): ServerStep3Payload {
       const room: ServerStep3Room = {}
       if (typeof r.type === 'string' && ROOM_TYPES.has(r.type)) {
         room.type = r.type as ServerStep3Room['type']
+      }
+      if (r.type === 'dorm' || s2.propertyType === 'dormitory') {
+        room.type = 'dorm'
+        const details = dormitorySchema.safeParse(r.dormitory)
+        if (details.success) room.dormitory = details.data
       }
       if (typeof r.count === 'number') room.count = r.count
       if (typeof r.maxOccupancy === 'number') room.maxOccupancy = r.maxOccupancy
@@ -493,10 +521,17 @@ function present(v: unknown): boolean {
 
 /** True when the mapped payload has every DTO-required field the server needs to accept this step. */
 export function isServerStepComplete(serverStep: number, payload: Record<string, unknown>): boolean {
+  if (serverStep === 1 && payload.propertyType === 'other' && payload.otherAccommodation !== undefined && !otherAccommodationSchema.safeParse(payload.otherAccommodation).success) return false
   if (serverStep === 3) {
     const rooms = payload.rooms as unknown[] | undefined
     const roomsOk = Array.isArray(rooms) && rooms.length > 0 &&
-      rooms.every((r) => present((r as ServerStep3Room).type) && (r as ServerStep3Room).count != null)
+      rooms.every((r) => {
+        const room = r as ServerStep3Room
+        return present(room.type) && room.count != null
+          && (room.type !== 'dorm' || room.dormitory === undefined || (dormitorySchema.safeParse(room.dormitory).success
+            && typeof room.maxOccupancy === 'number' && room.maxOccupancy >= 1
+            && room.maxOccupancy <= (room.dormitory?.totalBeds ?? 0)))
+      })
     return roomsOk && present(payload.amenities) && present(payload.houseRules)
   }
   if (serverStep === 4) {
@@ -514,7 +549,13 @@ export function isServerStepComplete(serverStep: number, payload: Record<string,
  */
 export function completeServerSteps(data: PortalStepData): Array<{ step: number; payload: Record<string, unknown> }> {
   const out: Array<{ step: number; payload: Record<string, unknown> }> = []
+  const property = (data[2] ?? {}) as PortalStep2
+  const rooms = ((data[4] ?? {}) as PortalStep4).rooms ?? []
   for (let step = 1; step <= 5; step++) {
+    if (step === 1 && property.propertyType === 'other' && property.otherAccommodation !== undefined
+      && !otherAccommodationSchema.safeParse(property.otherAccommodation).success) continue
+    if (step === 3 && rooms.some((room) => (property.propertyType === 'dormitory' || (room.type === 'dorm' && room.dormitory !== undefined))
+      && !dormitorySchema.safeParse(room.dormitory).success)) continue
     const payload = mapServerStep(step, data)
     if (isServerStepComplete(step, payload)) out.push({ step, payload })
   }

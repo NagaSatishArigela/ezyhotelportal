@@ -78,3 +78,10 @@ export function useAutoSave({ step, saveFn, debounceMs = 1500 }: UseAutoSaveOpti
 
   return { triggerSave, saveNow }
 }
+
+
+/** Save only when serialized form data changes, even when watch() returns a new object. */
+export function useAutoSaveSnapshot(data: Record<string, unknown>, triggerSave: (data: Record<string, unknown>) => void) {
+  const snapshot = JSON.stringify(data)
+  useEffect(() => { triggerSave(JSON.parse(snapshot)) }, [snapshot, triggerSave])
+}

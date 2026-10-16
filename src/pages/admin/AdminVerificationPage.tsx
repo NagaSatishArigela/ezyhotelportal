@@ -1,3 +1,6 @@
+import { DormitorySummary, OtherAccommodationSummary } from '@/components/shared/AccommodationSummary'
+import { PROPERTY_TYPES } from '@/lib/accommodation'
+import { FilePreview } from '@/components/shared/FilePreview'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -162,7 +165,9 @@ function PropertyDetailDialog({ propertyId, onClose }: { propertyId: string; onC
         {property && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-navy-500">Type</span><p className="font-semibold text-navy-900">{property.propertyType ?? '—'}</p></div>
+              <div><span className="text-navy-500">Type</span><p className="font-semibold text-navy-900">{PROPERTY_TYPES.find((type) => type.value === property.propertyType)?.label ?? property.propertyType ?? '—'}</p></div>
+              <div><span className="text-navy-500">Office Reception mobile number</span><p className="font-semibold text-navy-900">{property.receptionMobile ?? 'Not provided'}</p></div>
+              <div><span className="text-navy-500">Reception landline number (optional)</span><p className="font-semibold text-navy-900">{property.receptionLandline ?? 'Not provided'}</p></div>
               <div><span className="text-navy-500">Booking policy</span><p className="font-semibold text-navy-900">{property.bookingPolicy ?? '—'}</p></div>
               <div><span className="text-navy-500">Category</span><p className="font-semibold text-navy-900">{property.category ?? '—'}</p></div>
               <div><span className="text-navy-500">Revision count</span><p className="font-semibold text-navy-900">{property.revisionCount} / 3</p></div>
@@ -173,6 +178,9 @@ function PropertyDetailDialog({ propertyId, onClose }: { propertyId: string; onC
                 </p>
               </div>
             </div>
+
+            {property.propertyType === 'other' && property.otherAccommodation && <OtherAccommodationSummary value={property.otherAccommodation} />}
+            {detail.roomTypes.filter((room) => room.type === 'dorm' && room.dormitory).map((room) => <DormitorySummary key={room.id} value={room.dormitory!} />)}
 
             {detail.roomTypes.length > 0 && (
               <div>
@@ -214,9 +222,12 @@ function PropertyDetailDialog({ propertyId, onClose }: { propertyId: string; onC
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {compliance.documents.map((doc) => (
-                    <Badge key={doc.type} variant={doc.status === 'verified' ? 'green' : doc.status === 'rejected' ? 'red' : 'amber'}>
+                    <div key={doc.type} className="flex items-center gap-2">
+                    <Badge variant={doc.status === 'verified' ? 'green' : doc.status === 'rejected' ? 'red' : 'amber'}>
                       {doc.type.replace(/_/g, ' ')} · {doc.status}
                     </Badge>
+                    <FilePreview src={doc.url} name={doc.type.replace(/_/g, ' ')} isPdf={/\.pdf(?:[?#]|$)/i.test(doc.url)} />
+                    </div>
                   ))}
                 </div>
               </div>

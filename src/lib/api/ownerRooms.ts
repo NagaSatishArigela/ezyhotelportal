@@ -1,8 +1,10 @@
+import type { DormitoryDetails } from '@/lib/accommodation'
 import { api } from '../api'
 
 export type OwnerRoomType = 'ac' | 'nonac' | 'dorm' | 'suite'
 
 export interface OwnerRoom {
+  dormitory?: DormitoryDetails | null
   id: string
   type: OwnerRoomType
   count: number

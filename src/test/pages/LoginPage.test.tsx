@@ -2,10 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import * as authMock from '@/modules/auth/mocks/api'
+import { portalLogin } from '@/lib/portal-api'
+import { toast } from 'sonner'
 
 // ── Minimal router + query wrapper ──────────────────────────
 const mockNavigate = vi.fn()
+const mockSetAuth = vi.fn()
+vi.mock('@/lib/portal-api', () => ({ portalLogin: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -20,7 +24,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 vi.mock('@/store/auth.store', () => ({
   useAuthStore: (selector: (s: { setAuth: ReturnType<typeof vi.fn> }) => unknown) =>
-    selector({ setAuth: vi.fn() }),
+    selector({ setAuth: mockSetAuth }),
 }))
 
 function renderLogin() {
@@ -30,7 +34,8 @@ function renderLogin() {
 describe('LoginPage', () => {
   beforeEach(() => {
     mockNavigate.mockClear()
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    vi.mocked(portalLogin).mockReset()
   })
 
   it('renders email, password, and submit button', () => {
@@ -84,28 +89,29 @@ describe('LoginPage', () => {
 
   it('calls authApi.login with correct credentials', async () => {
     const user = userEvent.setup()
-    const loginSpy = vi.spyOn(authMock.authApi, 'login').mockResolvedValueOnce({
+    const loginSpy = vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
         id: 'u1', name: 'Ravi Sharma', email: 'owner@demo.com', phone: '', role: 'owner',
         avatarInitials: 'RS', onboardingStatus: 'in_progress', onboardingStep: 1,
       },
-      token: 'mock.token',
+      token: 'mock.token', refreshToken: 'mock.refresh',
     })
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'owner@demo.com')
     await user.type(screen.getByTestId('password-input'), 'demo1234')
     await user.click(screen.getByTestId('login-button'))
     await waitFor(() => expect(loginSpy).toHaveBeenCalledWith('owner@demo.com', 'demo1234'))
+    expect(mockSetAuth).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1' }), 'mock.token', false, 'mock.refresh')
   })
 
   it('navigates to onboarding on owner in-progress login', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authMock.authApi, 'login').mockResolvedValueOnce({
+    vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
         id: 'u1', name: 'Ravi Sharma', email: 'owner@demo.com', phone: '', role: 'owner',
         avatarInitials: 'RS', onboardingStatus: 'in_progress', onboardingStep: 1,
       },
-      token: 'mock.token',
+      token: 'mock.token', refreshToken: 'mock.refresh',
     })
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'owner@demo.com')
@@ -118,12 +124,12 @@ describe('LoginPage', () => {
 
   it('navigates to admin on admin login', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authMock.authApi, 'login').mockResolvedValueOnce({
+    vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
         id: 'u2', name: 'Ankit Verma', email: 'admin@demo.com', phone: '', role: 'admin',
         avatarInitials: 'AV',
       },
-      token: 'mock.token',
+      token: 'mock.token', refreshToken: 'mock.refresh',
     })
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'admin@demo.com')
@@ -136,13 +142,14 @@ describe('LoginPage', () => {
 
   it('shows error toast on wrong credentials', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authMock.authApi, 'login').mockRejectedValueOnce(new Error('Invalid email or password.'))
+    vi.mocked(portalLogin).mockRejectedValueOnce(new Error('Invalid email or password.'))
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'wrong@test.com')
     await user.type(screen.getByTestId('password-input'), 'wrongpass')
     await user.click(screen.getByTestId('login-button'))
-    // Error toast is triggered — form doesn't navigate
-    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled())
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Invalid email or password.'))
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(mockSetAuth).not.toHaveBeenCalled()
   })
 
   it('toggles password visibility', async () => {

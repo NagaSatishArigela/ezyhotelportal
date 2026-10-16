@@ -1,3 +1,7 @@
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { receptionContactSchema, type ReceptionContact } from '@/lib/reception-contact'
+import { FieldWrapper } from '@/components/shared/FieldWrapper'
 import { useState, useEffect } from 'react'
 import {
   CalendarDays, IndianRupee, Star, TrendingUp, Wallet, BedDouble,
@@ -268,7 +272,7 @@ export function OwnerAvailabilityPage() {
               className="mt-2 block w-56 rounded-[10px] border border-border bg-white px-3 py-2 text-sm text-navy-800"
             >
               {(rooms ?? []).map((r) => (
-                <option key={r.id} value={r.id}>{ROOM_TYPE_LABELS[r.type]} · {r.count} rooms</option>
+                <option key={r.id} value={r.id}>{r.dormitory?.roomName ?? ROOM_TYPE_LABELS[r.type]} · {r.count} rooms</option>
               ))}
             </select>
           </label>
@@ -339,7 +343,7 @@ function RoomEditorCard({ propertyId, room }: { propertyId: string; room: OwnerR
     <section className="rounded-(--radius-lg) border border-border bg-white p-5 shadow-1">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="font-display text-lg font-bold text-navy-900">{ROOM_TYPE_LABELS[room.type]}</h2>
+          <h2 className="font-display text-lg font-bold text-navy-900">{room.dormitory?.roomName ?? ROOM_TYPE_LABELS[room.type]}</h2>
           <p className="mt-1 text-sm text-navy-500">{count} room{count === 1 ? '' : 's'} · sleeps {occ}</p>
         </div>
         <Button size="sm" variant="outline" onClick={() => save.mutate()} disabled={save.isPending}>
@@ -357,7 +361,7 @@ function RoomEditorCard({ propertyId, room }: { propertyId: string; room: OwnerR
           <Input className="mt-2" type="number" min={0} value={fullday} onChange={(e) => setFullday(Number(e.target.value))} />
         </label>
         <label className="block text-sm font-semibold text-navy-700">Max occupancy
-          <Input className="mt-2" type="number" min={1} max={20} value={occ} onChange={(e) => setOcc(Number(e.target.value))} />
+          <Input className="mt-2" type="number" min={1} max={room.type === 'dorm' ? room.dormitory?.totalBeds ?? 500 : 20} value={occ} onChange={(e) => setOcc(Number(e.target.value))} />
         </label>
       </div>
     </section>
@@ -480,18 +484,44 @@ export function OwnerSettingsPage() {
     enabled: !!propertyId,
   })
 
+  const { register: registerContacts, handleSubmit: submitContacts, reset: resetContacts, formState: { errors: contactErrors } } = useForm<ReceptionContact>({ resolver: zodResolver(receptionContactSchema), defaultValues: { receptionMobile: '', receptionLandline: '' } })
+
   const [checkin, setCheckin] = useState('')
   const [checkout, setCheckout] = useState('')
   const [minHours, setMinHours] = useState('2')
   const [active, setActive] = useState(true)
 
+  const savedMobile = data?.receptionMobile ?? ''
+  const savedLandline = data?.receptionLandline ?? ''
+  const savedCheckin = data?.defaultCheckinTime ?? ''
+  const savedCheckout = data?.defaultCheckoutTime ?? ''
+  const savedMinHours = String(data?.minBookingHours ?? 2)
+  const savedActive = data?.isActive
+
   useEffect(() => {
-    if (!data) return
-    setCheckin(data.defaultCheckinTime ?? '')
-    setCheckout(data.defaultCheckoutTime ?? '')
-    setMinHours(String(data.minBookingHours ?? 2))
-    setActive(data.isActive)
-  }, [data])
+    resetContacts({ receptionMobile: savedMobile, receptionLandline: savedLandline }, { keepDirtyValues: true })
+  }, [savedMobile, savedLandline, resetContacts])
+
+  useEffect(() => {
+    if (savedActive === undefined) return
+    setCheckin(savedCheckin)
+    setCheckout(savedCheckout)
+    setMinHours(savedMinHours)
+    setActive(savedActive)
+  }, [savedCheckin, savedCheckout, savedMinHours, savedActive])
+
+  const saveContacts = useMutation({
+    mutationFn: (contacts: ReceptionContact) => ownerSettingsApi.update(propertyId as string, {
+      receptionMobile: contacts.receptionMobile,
+      receptionLandline: contacts.receptionLandline || null,
+    }),
+    onSuccess: (updated) => {
+      resetContacts({ receptionMobile: updated.receptionMobile ?? '', receptionLandline: updated.receptionLandline ?? '' })
+      toast.success('Reception contact saved')
+      qc.invalidateQueries({ queryKey: ['owner-settings', propertyId] })
+    },
+    onError: () => toast.error('Could not save reception contact. Please try again.'),
+  })
 
   const save = useMutation({
     mutationFn: () =>
@@ -521,6 +551,20 @@ export function OwnerSettingsPage() {
           {save.isPending ? 'Saving…' : 'Save changes'}
         </Button>
       } />
+      <SectionCard title="Reception contact" subtitle="For all property notifications and status updates across every service category." action={
+        <Button type="button" size="sm" onClick={submitContacts((contacts) => saveContacts.mutate(contacts))} disabled={saveContacts.isPending}>
+          {saveContacts.isPending ? 'Saving…' : 'Save reception contact'}
+        </Button>
+      }>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FieldWrapper label="Office Reception mobile number" required error={contactErrors.receptionMobile?.message}>
+            <Input {...registerContacts('receptionMobile')} type="tel" aria-label="Office Reception mobile number" aria-required="true" placeholder="10-digit mobile number" />
+          </FieldWrapper>
+          <FieldWrapper label="Reception landline number" hint="Optional — include the STD code" error={contactErrors.receptionLandline?.message}>
+            <Input {...registerContacts('receptionLandline')} type="tel" aria-label="Reception landline number" />
+          </FieldWrapper>
+        </div>
+      </SectionCard>
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard title="Booking defaults">
           <div className="grid gap-4 sm:grid-cols-2">
