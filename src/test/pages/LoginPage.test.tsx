@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import * as portalApi from '@/lib/portal-api'
-import { useAuthStore } from '@/store/auth.store'
-vi.mock('@/lib/portal-api', () => ({ portalLogin: vi.fn() }))
+import { portalLogin } from '@/lib/portal-api'
+import { toast } from 'sonner'
 
 // ── Minimal router + query wrapper ──────────────────────────
 const mockNavigate = vi.fn()
+const mockSetAuth = vi.fn()
+vi.mock('@/lib/portal-api', () => ({ portalLogin: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -20,6 +22,11 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
+vi.mock('@/store/auth.store', () => ({
+  useAuthStore: Object.assign((selector: (s: { setAuth: ReturnType<typeof vi.fn> }) => unknown) =>
+    selector({ setAuth: mockSetAuth }), { getState: () => ({ user: null }) }),
+}))
+
 function renderLogin() {
   return render(<LoginPage />)
 }
@@ -28,7 +35,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     mockNavigate.mockClear()
     vi.clearAllMocks()
-    useAuthStore.getState().logout()
+    vi.mocked(portalLogin).mockReset()
   })
 
   it('renders email, password, and submit button', () => {
@@ -78,7 +85,7 @@ describe('LoginPage', () => {
 
   it('calls portalLogin with correct credentials', async () => {
     const user = userEvent.setup()
-    const loginSpy = vi.spyOn(portalApi, 'portalLogin').mockResolvedValueOnce({
+    const loginSpy = vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
         id: 'u1',
         name: 'Ravi Sharma',
@@ -89,19 +96,19 @@ describe('LoginPage', () => {
         onboardingStatus: 'in_progress',
         onboardingStep: 1,
       },
-      token: 'mock.token',
-      refreshToken: 'mock.refresh',
+      token: 'mock.token', refreshToken: 'mock.refresh',
     })
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'owner@demo.com')
     await user.type(screen.getByTestId('password-input'), 'demo1234')
     await user.click(screen.getByTestId('login-button'))
     await waitFor(() => expect(loginSpy).toHaveBeenCalledWith('owner@demo.com', 'demo1234'))
+    expect(mockSetAuth).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1' }), 'mock.token', false, 'mock.refresh')
   })
 
   it('navigates to hotel selection after applicant login', async () => {
     const user = userEvent.setup()
-    vi.spyOn(portalApi, 'portalLogin').mockResolvedValueOnce({
+    vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
         id: 'u1',
         name: 'Ravi Sharma',
@@ -112,8 +119,7 @@ describe('LoginPage', () => {
         onboardingStatus: 'in_progress',
         onboardingStep: 1,
       },
-      token: 'mock.token',
-      refreshToken: 'mock.refresh',
+      token: 'mock.token', refreshToken: 'mock.refresh',
     })
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'owner@demo.com')
@@ -126,7 +132,7 @@ describe('LoginPage', () => {
 
   it('continues to onboarding after login from the listing entry', async () => {
     const user = userEvent.setup()
-    vi.mocked(portalApi.portalLogin).mockResolvedValueOnce({
+    vi.mocked(portalLogin).mockResolvedValueOnce({
       user: { id: 'u1', name: 'Applicant', email: 'owner@demo.com', phone: '', role: 'applicant', avatarInitials: 'A' },
       token: 'mock.token', refreshToken: 'mock.refresh',
     })
@@ -139,7 +145,7 @@ describe('LoginPage', () => {
 
   it('navigates to admin on admin login', async () => {
     const user = userEvent.setup()
-    vi.spyOn(portalApi, 'portalLogin').mockResolvedValueOnce({
+    vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
         id: 'u2',
         name: 'Ankit Verma',
@@ -148,8 +154,7 @@ describe('LoginPage', () => {
         role: 'admin',
         avatarInitials: 'AV',
       },
-      token: 'mock.token',
-      refreshToken: 'mock.refresh',
+      token: 'mock.token', refreshToken: 'mock.refresh',
     })
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'admin@demo.com')
@@ -162,15 +167,14 @@ describe('LoginPage', () => {
 
   it('shows error toast on wrong credentials', async () => {
     const user = userEvent.setup()
-    vi.spyOn(portalApi, 'portalLogin').mockRejectedValueOnce(
-      new Error('Invalid email or password.')
-    )
+    vi.mocked(portalLogin).mockRejectedValueOnce(new Error('Invalid email or password.'))
     renderLogin()
     await user.type(screen.getByTestId('email-input'), 'wrong@test.com')
     await user.type(screen.getByTestId('password-input'), 'wrongpass')
     await user.click(screen.getByTestId('login-button'))
-    // Error toast is triggered — form doesn't navigate
-    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled())
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Invalid email or password.'))
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(mockSetAuth).not.toHaveBeenCalled()
   })
 
   it('toggles password visibility', async () => {

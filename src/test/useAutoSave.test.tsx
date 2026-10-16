@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
-import { useAutoSave } from '@/hooks/useAutoSave'
+import { useAutoSave, useAutoSaveSnapshot } from '@/hooks/useAutoSave'
 import { useOnboardingStore } from '@/store/onboarding.store'
 
 it('flushes the latest upload changes when navigating away before the server debounce', async () => {
@@ -25,4 +25,24 @@ it('waits for in-flight saves and writes the latest edit afterwards', async () =
   await act(async () => { finish(); await pending })
   expect(saveFn.mock.calls.map(c => c[0])).toEqual([{ propertyName: 'Old' }, { propertyName: 'Latest' }])
   expect(useOnboardingStore.getState().autoSaveState).toBe('saved')
+})
+
+
+it('does not restart autosave for equivalent form snapshots on rerender', () => {
+  const trigger = vi.fn()
+  const { rerender } = renderHook(({ data }) => useAutoSaveSnapshot(data, trigger), { initialProps: { data: { name: 'Property' } } })
+  expect(trigger).toHaveBeenCalledTimes(1)
+  rerender({ data: { name: 'Property' } })
+  expect(trigger).toHaveBeenCalledTimes(1)
+  rerender({ data: { name: 'Updated property' } })
+  expect(trigger).toHaveBeenCalledTimes(2)
+  expect(trigger).toHaveBeenLastCalledWith({ name: 'Updated property' })
+})
+
+it('keeps the save trigger stable when an inline error callback changes', () => {
+  const saveFn = vi.fn().mockResolvedValue(undefined)
+  const { result, rerender } = renderHook(() => useAutoSave({ step: 2, saveFn, onError: () => undefined }))
+  const trigger = result.current.triggerSave
+  rerender()
+  expect(result.current.triggerSave).toBe(trigger)
 })

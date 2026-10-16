@@ -25,7 +25,7 @@ it('shows formats, limits and conditional requirements before listing', () => {
   expect(screen.queryByText('FSSAI license')).not.toBeInTheDocument()
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'private_limited' } })
   expect(screen.getByText('Board resolution')).toBeVisible()
-  expect(screen.queryByText('GST certificate')).not.toBeInTheDocument()
+  expect(screen.getByText('GST certificate')).toBeVisible()
   fireEvent.click(screen.getByLabelText('GST registered'))
   expect(screen.getByText('GST certificate')).toBeVisible()
   expect(screen.queryByText('Aadhaar / ID proof')).not.toBeInTheDocument()
@@ -35,8 +35,8 @@ it('shows formats, limits and conditional requirements before listing', () => {
 })
 
 it.each(['individual', 'sole_proprietor', 'partnership', 'llp', 'private_limited', 'public_limited'])('keeps GST optional for %s', entity => {
-  expect(documentRequirements(entity, false).some(d => d.type === 'gstin_certificate')).toBe(false)
-  expect(documentRequirements(entity, true).find(d => d.type === 'gstin_certificate')?.required).toBe(true)
+  expect(documentRequirements(entity, false).find(d => d.type === 'gstin_certificate')?.required).toBe(false)
+  expect(documentRequirements(entity, true).find(d => d.type === 'gstin_certificate')?.required).toBe(false)
   expect(mapStep5({ 1: { businessEntity: entity, gstNumber: '  ' } })).not.toHaveProperty('gstin')
   expect(mapStep5({ 1: { businessEntity: entity, gstNumber: ' 29abcde1234f1z5 ' } }).gstin).toBe('29ABCDE1234F1Z5')
 })

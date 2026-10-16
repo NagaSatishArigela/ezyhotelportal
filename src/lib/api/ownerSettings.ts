@@ -1,6 +1,8 @@
 import { api } from '../api'
 
 export interface OwnerSettings {
+  receptionMobile: string | null
+  receptionLandline: string | null
   defaultCheckinTime: string | null
   defaultCheckoutTime: string | null
   minBookingHours: number | null
@@ -9,6 +11,8 @@ export interface OwnerSettings {
 }
 
 export interface UpdateOwnerSettings {
+  receptionMobile?: string
+  receptionLandline?: string | null
   defaultCheckinTime?: string
   defaultCheckoutTime?: string
   minBookingHours?: number

@@ -1,4 +1,7 @@
-import { PROPERTY_TYPE_OPTIONS, requiredBookingPolicy } from '@/lib/property-details'
+import { requiredBookingPolicy } from '@/lib/property-details'
+import { normalizePropertyType, dormitorySchema, PROPERTY_TYPES } from '@/lib/accommodation'
+import { DormitorySummary, OtherAccommodationSummary } from '@/components/shared/AccommodationSummary'
+import { DormitoryFields, OtherAccommodationFields } from './AccommodationFields'
 import { SavedCompliance } from '@/components/owner/SavedCompliance'
 import { AmenityPicker } from '@/components/owner/AmenityPicker'
 import { PropertyDetailsFields } from '@/components/owner/PropertyDetailsFields'
@@ -9,7 +12,7 @@ import { saveApplicationProgress } from '@/lib/save-application'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { step1Schema, step2Schema, photosGateSchema, step4Schema, docsGateSchema, step6Schema, completedOnboardingSteps, type Step1Data, type Step2Data, type HouseRulesData, type Step4Data, type RoomData, type Step6Data } from '@/lib/onboarding-validation'
+import { step1Schema, step2Schema, roomSchema, photosGateSchema, step4Schema, docsGateSchema, step6Schema, completedOnboardingSteps, type Step1Data, type Step2Data, type HouseRulesData, type Step4Data, type RoomData, type Step6Data } from '@/lib/onboarding-validation'
 import { toast } from 'sonner'
 import {
   Building2, Camera, CheckCircle, CreditCard, FileText, Home,
@@ -30,7 +33,7 @@ import { uploadErrorMessage } from '@/lib/upload-error'
 import { UploadedPhoto } from '@/components/shared/UploadedPhoto'
 import { cn, formatINR } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/onboarding.store'
-import { useAutoSave } from '@/hooks/useAutoSave'
+import { useAutoSave, useAutoSaveSnapshot } from '@/hooks/useAutoSave'
 import {
   saveOnboardingStep,
   verifyIFSC, uploadFile, verifyPincode,
@@ -170,7 +173,7 @@ export function Step1PropertyDetails() {
   const values = watch()
   const { triggerSave } = useOnboardingAutoSave(1, () => trigger())
 
-  useEffect(() => { triggerSave(values as Record<string, unknown>) }, [JSON.stringify(values)])
+  useAutoSaveSnapshot(values as Record<string, unknown>, triggerSave)
 
   const category = watch('propertyCategory')
 
@@ -260,7 +263,10 @@ export function Step2RoomsPricing() {
     resolver: zodResolver(step2Schema),
     defaultValues: {
       propertyName: stored?.propertyName ?? '',
-      propertyType: stored?.propertyType ?? 'hotel',
+      receptionMobile: stored?.receptionMobile ?? '',
+      receptionLandline: stored?.receptionLandline ?? '',
+      propertyType: normalizePropertyType(stored?.propertyType) ?? 'hotel',
+      otherAccommodation: stored?.otherAccommodation,
       detailsByType: stored?.detailsByType ?? {},
       address: stored?.address ?? '',
       addressLine2: stored?.addressLine2 ?? '',
@@ -280,7 +286,7 @@ export function Step2RoomsPricing() {
 
   const values = watch()
   const { triggerSave } = useOnboardingAutoSave(2, () => trigger())
-  useEffect(() => { triggerSave(values as Record<string, unknown>) }, [JSON.stringify(values)])
+  useAutoSaveSnapshot(values as Record<string, unknown>, triggerSave)
 
   const [pincodeLoading, setPincodeLoading] = useState(false)
   const amenities = watch('amenities')
@@ -324,13 +330,17 @@ export function Step2RoomsPricing() {
           <div>
             <p className="text-sm font-semibold text-navy-700 mb-2">Property type <span className="text-error-500">*</span></p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {PROPERTY_TYPE_OPTIONS.map(({ value, label }) => {
+              {PROPERTY_TYPES.map(({ value, label }) => {
                 const Icon = PROPERTY_TYPE_ICONS[value]
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setValue('propertyType', value)}
+                    aria-pressed={propertyType === value}
+                    onClick={() => {
+                      setValue('propertyType', value)
+                      if (value === 'other' && !watch('otherAccommodation')) setValue('otherAccommodation', {})
+                    }}
                     className={cn(
                       'rounded-[10px] border p-3 text-xs font-semibold text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600',
                       propertyType === value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-border text-navy-600 hover:border-navy-300'
@@ -341,6 +351,15 @@ export function Step2RoomsPricing() {
                 )
               })}
             </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FieldWrapper label="Office Reception mobile number" required error={errors.receptionMobile?.message} hint="For all property notifications and status updates">
+              <Input {...register('receptionMobile')} type="tel" inputMode="tel" autoComplete="tel-national" aria-label="Office Reception mobile number" aria-required="true" placeholder="10-digit mobile number" error={!!errors.receptionMobile} />
+            </FieldWrapper>
+            <FieldWrapper label="Reception landline number" error={errors.receptionLandline?.message} hint="Optional — include the STD code">
+              <Input {...register('receptionLandline')} type="tel" inputMode="tel" aria-label="Reception landline number" placeholder="e.g. 080 23456789" error={!!errors.receptionLandline} />
+            </FieldWrapper>
           </div>
 
           {/* Address */}
@@ -419,6 +438,14 @@ export function Step2RoomsPricing() {
           </FieldWrapper>
         </div>
       </TwoCol>
+
+      {propertyType === 'other' && (
+        <Card>
+          {watch('otherAccommodation') ? <OtherAccommodationFields value={watch('otherAccommodation')} onChange={(value) => setValue('otherAccommodation', value, { shouldValidate: true })} />
+            : <Button type="button" variant="outline" onClick={() => setValue('otherAccommodation', {})}>Add accommodation facilities</Button>}
+          {errors.otherAccommodation && <p role="alert" className="mt-3 text-xs text-error-500">{errors.otherAccommodation.message}</p>}
+        </Card>
+      )}
 
       {/* Amenities */}
       <PropertyDetailsFields placement="before" propertyType={propertyType} value={detailsByType[propertyType] ?? {}}
@@ -535,9 +562,7 @@ export function Step3Policies() {
 
   const { triggerSave } = useOnboardingAutoSave(3, validate)
 
-  useEffect(() => {
-    triggerSave({ reviewerNotes, photos })
-  }, [reviewerNotes, JSON.stringify(photos)])
+  useAutoSaveSnapshot({ reviewerNotes, photos }, triggerSave)
 
   const addFiles = async (category: PhotoCategory, files: FileList | null) => {
     if (!files || files.length === 0 || uploadBusy.current) return
@@ -796,13 +821,15 @@ function tiers(base: number) {
   return [base, Math.round(base * 3.4), Math.round(base * 6.5), Math.round(base * 13)].map(formatINR)
 }
 
-function RoomCard({ room, onUpdate, onDelete, bookingPolicy }: {
+function RoomCard({ room, onUpdate, onDelete, bookingPolicy, dormitoryProperty }: {
   room: RoomData
   onUpdate: (r: RoomData) => void
   onDelete: () => void
   bookingPolicy: string
+  dormitoryProperty: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const validation = roomSchema.safeParse(room)
   const toggleAmenity = (a: string) => {
     onUpdate({ ...room, amenities: room.amenities.includes(a) ? room.amenities.filter((x) => x !== a) : [...room.amenities, a] })
   }
@@ -813,7 +840,7 @@ function RoomCard({ room, onUpdate, onDelete, bookingPolicy }: {
         <div>
           <p className="font-display font-bold text-navy-900">{room.name}</p>
           <p className="text-sm text-navy-500 mt-0.5">
-            {room.count} rooms · {room.bedType} bed · Max {room.maxOccupancy} guests
+            {room.count} rooms · {room.type === 'dorm' ? room.dormitory?.bedType ?? 'Bed type pending' : `${room.bedType} bed`} · Max {room.maxOccupancy} guests
             {room.hourlyRate ? ` · ₹${room.hourlyRate}/hr` : ''}
             {room.fulldayRate ? ` · ₹${room.fulldayRate}/day` : ''}
           </p>
@@ -833,29 +860,33 @@ function RoomCard({ room, onUpdate, onDelete, bookingPolicy }: {
               <Input value={room.name} onChange={(e) => onUpdate({ ...room, name: e.target.value })} />
             </FieldWrapper>
             <FieldWrapper label="Room type" required>
-              <Select value={room.type} onChange={(e) => onUpdate({ ...room, type: e.target.value as RoomData['type'] })}>
+              <Select value={room.type} disabled={dormitoryProperty} onChange={(e) => onUpdate({ ...room, type: e.target.value as RoomData['type'], dormitory: e.target.value === 'dorm' ? room.dormitory ?? { linenProvided: [] } : undefined })}>
                 {ROOM_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </Select>
             </FieldWrapper>
             <FieldWrapper label="Total rooms">
               <Input type="number" min={1} value={room.count} onChange={(e) => onUpdate({ ...room, count: Number(e.target.value) })} />
             </FieldWrapper>
-            <FieldWrapper label="Max occupancy">
-              <Input type="number" min={1} max={10} value={room.maxOccupancy} onChange={(e) => onUpdate({ ...room, maxOccupancy: Number(e.target.value) })} />
+            <FieldWrapper label={room.type === 'dorm' ? 'Room capacity (guests allowed)' : 'Max occupancy'}>
+              <Input type="number" min={1} max={room.type === 'dorm' ? 500 : 20} value={room.maxOccupancy} onChange={(e) => onUpdate({ ...room, maxOccupancy: Number(e.target.value) })} />
             </FieldWrapper>
-            <FieldWrapper label="Bed type">
+            {room.type !== 'dorm' && <FieldWrapper label="Bed type">
               <Select value={room.bedType} onChange={(e) => onUpdate({ ...room, bedType: e.target.value })}>
                 {BED_TYPES.map((b) => <option key={b} value={b}>{b}</option>)}
               </Select>
-            </FieldWrapper>
+            </FieldWrapper>}
           </div>
+
+          {room.type === 'dorm' && (room.dormitory ? <DormitoryFields value={room.dormitory} onChange={(dormitory) => onUpdate({ ...room, dormitory: { linenProvided: [], ...dormitory } })} />
+            : <Button type="button" variant="outline" onClick={() => onUpdate({ ...room, dormitory: { linenProvided: [] } })}>Add dormitory specifications</Button>)}
+          {!validation.success && <p role="alert" className="text-xs text-error-500">{room.type === 'dorm' && !dormitorySchema.safeParse(room.dormitory).success ? 'Complete all dormitory specifications. ' : ''}{validation.error.issues.filter((issue) => issue.path[0] !== 'dormitory').map((issue) => issue.message).join(' ')}</p>}
 
           {/* Pricing */}
           <div className="grid gap-4 sm:grid-cols-2">
             {(bookingPolicy === 'hourly' || bookingPolicy === 'both') && (
               <div>
                 <FieldWrapper label="Hourly rate (₹/hr)" hint="Base rate for short stays" required>
-                  <Input type="number" min={50} value={room.hourlyRate ?? ''} onChange={(e) => onUpdate({ ...room, hourlyRate: Number(e.target.value) })} prefix="₹" />
+                  <Input type="number" min={100} max={100000} value={room.hourlyRate ?? ''} onChange={(e) => onUpdate({ ...room, hourlyRate: Number(e.target.value) })} prefix="₹" />
                 </FieldWrapper>
                 {room.hourlyRate && (
                   <div className="mt-2">
@@ -914,9 +945,10 @@ export function Step4LegalTax() {
   const commission = COMMISSION_BY_CATEGORY[category] ?? PLATFORM_COMMISSION
 
   const propertyType = step2Data?.propertyType ?? 'hotel'
+  const isDormitory = propertyType === 'dormitory'
   const isBanquet = propertyType === 'banquet'
 
-  const [rooms, setRooms] = useState<RoomData[]>(stored?.rooms as RoomData[] ?? DEFAULT_ROOMS)
+  const [rooms, setRooms] = useState<RoomData[]>((stored?.rooms as RoomData[] ?? DEFAULT_ROOMS).map((room) => isDormitory ? { ...room, type: 'dorm', dormitory: room.dormitory ?? { linenProvided: [] } } : room))
   const [seatingCapacity, setSeatingCapacity] = useState<number | undefined>(
     typeof step2Data?.detailsByType?.banquet?.seatingCapacity === 'number'
       ? step2Data.detailsByType.banquet.seatingCapacity : stored?.seatingCapacity,
@@ -936,15 +968,14 @@ export function Step4LegalTax() {
     return base && seatingOk
   })
 
-  useEffect(() => {
-    triggerSave({ rooms, seatingCapacity, houseRules } as Record<string, unknown>)
-  }, [JSON.stringify(rooms), seatingCapacity, JSON.stringify(houseRules)])
+  useAutoSaveSnapshot({ rooms, seatingCapacity, houseRules }, triggerSave)
 
   const addRoom = () => {
     const newRoom: RoomData = {
       id: `r${Date.now()}`,
       name: 'New room type',
-      type: 'ac',
+      type: isDormitory ? 'dorm' : 'ac',
+      dormitory: isDormitory ? { linenProvided: [] } : undefined,
       count: 4,
       maxOccupancy: 2,
       bedType: 'King',
@@ -990,6 +1021,7 @@ export function Step4LegalTax() {
             key={room.id}
             room={room}
             bookingPolicy={bookingPolicy}
+            dormitoryProperty={isDormitory}
             onUpdate={(updated) => setRooms((prev) => prev.map((r) => r.id === room.id ? updated : r))}
             onDelete={() => setRooms((prev) => prev.filter((r) => r.id !== room.id))}
           />
@@ -1105,7 +1137,7 @@ function DocumentsForm() {
   // Server-ready documents array (docId already resolved to DocumentType).
   const documents: DocValue[] = DOCS.filter((d) => urls[d.id]).map((d) => ({ type: d.type, url: urls[d.id] }))
 
-  const validate = useCallback(async () => {
+  const validate = async () => {
     if (pendingUploads.current.size) { toast.error('Wait for document uploads to finish.'); return false }
     const missing = DOCS.find((document) => document.required && !urls[document.id])
     if (missing) {
@@ -1118,12 +1150,10 @@ function DocumentsForm() {
       return false
     }
     return true
-  }, [JSON.stringify(documents), JSON.stringify(DOCS)])
+  }
 
   const { triggerSave } = useOnboardingAutoSave(5, validate)
-  useEffect(() => {
-    triggerSave({ docUrls: urls, documents })
-  }, [JSON.stringify(urls)])
+  useAutoSaveSnapshot({ docUrls: urls, documents }, triggerSave)
 
   const required = DOCS.filter((d) => d.required)
   const uploaded = required.filter((d) => urls[d.id])
@@ -1204,7 +1234,7 @@ function BankForm() {
 
   const values = watch()
   const { triggerSave } = useOnboardingAutoSave(6, () => trigger())
-  useEffect(() => { triggerSave(values as Record<string, unknown>) }, [JSON.stringify(values)])
+  useAutoSaveSnapshot(values as Record<string, unknown>, triggerSave)
 
   const [ifscStatus, setIfscStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [bankBranch, setBankBranch] = useState('')
@@ -1518,6 +1548,19 @@ export function Step7ReviewSubmit() {
             </div>
           </div>
         </div>
+      </Card>
+
+      {s2?.propertyType === 'other' && s2.otherAccommodation && (
+        <Card><h2 className="font-display font-bold text-navy-900 mb-4">Other accommodation facilities</h2><OtherAccommodationSummary value={s2.otherAccommodation} /></Card>
+      )}
+      {s4?.rooms?.filter((room) => room.type === 'dorm' && room.dormitory).map((room) => (
+        <Card key={room.id}><h2 className="font-display font-bold text-navy-900 mb-4">Dormitory — {room.name}</h2><DormitorySummary value={room.dormitory!} /></Card>
+      ))}
+
+      <Card>
+        <h2 className="font-display font-bold text-navy-900 mb-3">Reception contact</h2>
+        <p className="text-sm text-navy-600">Office Reception mobile number: <strong>{s2?.receptionMobile || 'Required'}</strong></p>
+        <p className="text-sm text-navy-600 mt-2">Reception landline number: <strong>{s2?.receptionLandline || 'Not provided (optional)'}</strong></p>
       </Card>
 
       {/* Declaration */}

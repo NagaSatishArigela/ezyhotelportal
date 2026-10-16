@@ -31,6 +31,17 @@ it('restores all server sections without placing masked values into editable fie
   expect(steps[6]).not.toHaveProperty('pan'); expect(steps[6]).not.toHaveProperty('accountNumber')
   expect(steps[1]).not.toHaveProperty('gstNumber')
 })
+it('restores reception contacts and accommodation specifications alongside generic property details', () => {
+  const other = { type: 'container_home', numberOfBeds: 3, windows: 'no' }
+  const dormitory = { roomName: 'D-101', totalBeds: 24 }
+  const steps = restorePortalSteps({ ...draft, draftData: {
+    ...draft.draftData,
+    step1: { ...(draft.draftData.step1 as Record<string, unknown>), propertyType: 'other', receptionMobile: '9876543210', receptionLandline: '08023456789', otherAccommodation: other, propertyDetails: {} },
+    step3: { rooms: [{ type: 'dorm', count: 1, maxOccupancy: 24, dormitory }] },
+  } })
+  expect(steps[2]).toMatchObject({ receptionMobile: '9876543210', receptionLandline: '08023456789', otherAccommodation: other, detailsByType: { other: {} } })
+  expect(steps[4]?.rooms).toEqual([expect.objectContaining({ maxOccupancy: 24, dormitory })])
+})
 it('restores another property without mixing the previous property data', async () => {
   useOnboardingStore.setState({ ownerId: 'u1', draftId: 'other', stepData: { 1: { ownerName: 'Wrong owner' }, 2: { propertyName: 'Wrong hotel' } } })
   await restoreApplication('p1')

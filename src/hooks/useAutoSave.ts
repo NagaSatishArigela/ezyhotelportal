@@ -16,6 +16,8 @@ export function useAutoSave({ step, saveFn, onError, debounceMs = 1500 }: UseAut
   const running = useRef<Promise<void>>()
   const saver = useRef(saveFn)
   saver.current = saveFn
+  const errorHandler = useRef(onError)
+  errorHandler.current = onError
 
   const saveNow = useCallback(async function flush(): Promise<void> {
     clearTimeout(timer.current)
@@ -59,8 +61,15 @@ export function useAutoSave({ step, saveFn, onError, debounceMs = 1500 }: UseAut
     useOnboardingStore.getState().saveStepData(step, data)
     useOnboardingStore.getState().setAutoSaveState('saving')
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => { void saveNow().catch(error => onError?.(error)) }, debounceMs)
-  }, [step, debounceMs, saveNow, onError])
+    timer.current = setTimeout(() => { void saveNow().catch(error => errorHandler.current?.(error)) }, debounceMs)
+  }, [step, debounceMs, saveNow])
 
   return { triggerSave, saveNow }
+}
+
+
+/** Save only when serialized form data changes, even when watch() returns a new object. */
+export function useAutoSaveSnapshot(data: Record<string, unknown>, triggerSave: (data: Record<string, unknown>) => void) {
+  const snapshot = JSON.stringify(data)
+  useEffect(() => { triggerSave(JSON.parse(snapshot)) }, [snapshot, triggerSave])
 }

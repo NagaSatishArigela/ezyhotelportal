@@ -80,7 +80,8 @@ describe('document property requirements', () => {
 
   it.each(['individual', 'sole_proprietor', 'partnership', 'llp', 'private_limited', 'public_limited'])('uses the new KYC requirements for %s', entity => {
     const docs = documentRequirements(entity, true)
-    expect(docs.filter(doc => doc.required).map(doc => doc.type)).toEqual(expect.arrayContaining(['id_proof', 'id_proof_back', 'trade_license']))
+    expect(docs.filter(doc => doc.required).map(doc => doc.type)).toEqual(expect.arrayContaining(['pan_card', 'rental_agreement', 'cancelled_cheque', 'trade_license']))
+    expect(docs.some(doc => doc.type === 'id_proof')).toBe(['individual', 'sole_proprietor'].includes(entity))
     expect(docs.find(doc => doc.type === 'gstin_certificate')?.required).toBe(false)
     expect(docs.find(doc => doc.type === 'udyam_certificate')?.required).toBe(false)
     expect(docs.find(doc => doc.type === 'owner_photo')).toBeDefined()

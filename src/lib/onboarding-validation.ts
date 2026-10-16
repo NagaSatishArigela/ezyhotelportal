@@ -2,6 +2,8 @@ import { z } from 'zod'
 import type { PortalStepData } from './onboarding-mapping'
 import { documentRequirements } from './document-requirements'
 import { propertyDetailsErrors, requiredBookingPolicy } from './property-details'
+import { receptionContactSchema } from './reception-contact'
+import { dormitorySchema, otherAccommodationSchema, PROPERTY_TYPES } from './accommodation'
 
 export const step1Schema = z.object({
   ownerName:        z.string().min(2, 'At least 2 characters'),
@@ -15,8 +17,10 @@ export const step1Schema = z.object({
 export type Step1Data = z.infer<typeof step1Schema>
 
 export const step2Schema = z.object({
+  ...receptionContactSchema.shape,
   propertyName:        z.string().min(2, 'Required'),
-  propertyType:        z.string().min(1, 'Select a type'),
+  propertyType:        z.enum(PROPERTY_TYPES.map(type => type.value)),
+  otherAccommodation: otherAccommodationSchema.partial().optional(),
   detailsByType: z.record(z.string(), z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]))).optional(),
   address:             z.string().min(5, 'Required'),
   addressLine2:        z.string().min(5, 'At least 5 characters').max(300, 'Max 300 characters'),
@@ -32,6 +36,7 @@ export const step2Schema = z.object({
   defaultCheckinTime:  z.string(),
   defaultCheckoutTime: z.string(),
 }).superRefine((data, context) => {
+  if (data.propertyType === 'other' && data.otherAccommodation !== undefined && !otherAccommodationSchema.safeParse(data.otherAccommodation).success) context.addIssue({ code: 'custom', path: ['otherAccommodation'], message: 'Complete all accommodation facility questions.' })
   const policy = requiredBookingPolicy(data.propertyType)
   if (policy && data.bookingPolicy !== policy) context.addIssue({ code: z.ZodIssueCode.custom, path: ['bookingPolicy'], message: policy === 'fullday' ? 'PG supports full-day bookings only' : 'Banquets support hourly bookings only' })
   for (const message of propertyDetailsErrors(data.propertyType, data.detailsByType?.[data.propertyType] ?? {})) context.addIssue({ code: z.ZodIssueCode.custom, path: ['detailsByType'], message })
@@ -54,12 +59,17 @@ export const roomSchema = z.object({
   name:         z.string().min(2, 'Required'),
   type:         z.enum(['ac', 'nonac', 'dorm', 'suite']),
   count:        z.number().min(1, 'At least 1 room'),
-  maxOccupancy: z.number().min(1).max(10),
+  maxOccupancy: z.number().int().min(1).max(500),
   bedType:      z.string(), // Display-only value; the server does not persist bed type.
   sizeNote:     z.string().optional(),
   amenities:    z.array(z.string()),
-  hourlyRate:   z.number().min(50).optional(),
+  hourlyRate:   z.number().min(100).max(100000).optional(),
   fulldayRate:  z.number().min(500).optional(),
+  dormitory: dormitorySchema.partial().optional(),
+}).superRefine((room, context) => {
+  if (room.type === 'dorm' && room.dormitory !== undefined && !dormitorySchema.safeParse(room.dormitory).success) context.addIssue({ code: 'custom', path: ['dormitory'], message: 'Complete all dormitory specifications.' })
+  if (room.type === 'dorm' && room.dormitory?.totalBeds && room.maxOccupancy > room.dormitory.totalBeds) context.addIssue({ code: 'custom', path: ['maxOccupancy'], message: 'Room capacity cannot exceed total beds.' })
+  if (room.type !== 'dorm' && room.maxOccupancy > 20) context.addIssue({ code: 'custom', path: ['maxOccupancy'], message: 'Maximum 20 guests per room.' })
 })
 
 export const houseRulesSchema = z.object({
@@ -122,7 +132,7 @@ export function completedOnboardingSteps(data: PortalStepData, savedCompliance: 
     step1Schema.safeParse(data[1]).success,
     step2Schema.safeParse(data[2]).success,
     photosGateSchema.safeParse(data[3]?.photos).success,
-    step4Schema.safeParse(rooms).success && (data[2]?.propertyType !== 'banquet' || (typeof seating === 'number' && seating >= 50 && seating <= 5000)),
+    step4Schema.safeParse(rooms).success && (data[2]?.propertyType !== 'dormitory' || (rooms?.rooms as RoomData[] | undefined)?.every(room => room.type === 'dorm' && dormitorySchema.safeParse(room.dormitory).success) === true) && (data[2]?.propertyType !== 'banquet' || (typeof seating === 'number' && seating >= 50 && seating <= 5000)),
     typeof savedCompliance === 'object'
       ? requiredDocumentsPresent({ ...data, 5: { documents: savedCompliance.documents } })
       : savedCompliance || (docsGateSchema.safeParse(data[5]?.documents).success && requiredDocumentsPresent(data)),
