@@ -7,6 +7,7 @@ import { ownerSettingsApi, type OwnerSettings } from '@/lib/api/ownerSettings'
 import { useOnboardingStore } from '@/store/onboarding.store'
 
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { propertyId: 'property' } }) }))
+vi.mock('@/lib/save-application', () => ({ saveApplicationProgress: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('@/lib/api/ownerSettings', () => ({ ownerSettingsApi: { get: vi.fn(), update: vi.fn() } }))
 vi.mock('@/lib/portal-api', () => ({
   createPropertyDraft: vi.fn().mockResolvedValue('draft'), saveOnboardingStep: vi.fn().mockResolvedValue({}),
@@ -45,7 +46,7 @@ function renderSettings() {
 it('allows an existing owner to pause the listing and change defaults without a reception number', async () => {
   const { client } = renderSettings()
   await screen.findByLabelText('Office Reception mobile number')
-  fireEvent.click(screen.getByRole('checkbox'))
+  fireEvent.click(screen.getByRole('button', { name: 'OFF' }))
   fireEvent.change(screen.getByLabelText('Default check-in'), { target: { value: '10:00' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
   await waitFor(() => expect(ownerSettingsApi.update).toHaveBeenCalledWith('property', expect.objectContaining({ isActive: false, defaultCheckinTime: '10:00' })))

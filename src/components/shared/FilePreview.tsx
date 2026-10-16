@@ -1,48 +1,44 @@
+import { resolvePreviewUrl } from '@/lib/private-document'
+import { privateDocumentPath, photoPreviewPath } from '@/lib/private-document'
+import { protectedDocumentPath } from '@/lib/document-preview'
+import { api } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { api } from '@/lib/api'
-import { protectedDocumentPath } from '@/lib/document-preview'
 
 export function FilePreview({ src, name, isPdf = false }: { src: string; name: string; isPdf?: boolean }) {
   const [open, setOpen] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [documentPreview, setDocumentPreview] = useState<{ source: string; url: string } | null>(null)
-  const [loadError, setLoadError] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const documentPath = protectedDocumentPath(src)
-
+  const [result, setResult] = useState<{ source: string; url?: string; failed?: boolean }>()
+  const legacyPath = protectedDocumentPath(src)
+  const remote = !!(legacyPath || privateDocumentPath(src) || photoPreviewPath(src))
   useEffect(() => {
-    if (!open || !documentPath) return
-    const controller = new AbortController()
+    if (!open) return
     let active = true
     let objectUrl: string | undefined
-    setDocumentPreview(null)
-    setLoadError(false)
-    api.get<Blob>(documentPath, { responseType: 'blob', signal: controller.signal }).then(({ data }) => {
-      if (!active) return
-      objectUrl = URL.createObjectURL(data)
-      setDocumentPreview({ source: src, url: objectUrl })
-    }).catch(() => { if (active) setLoadError(true) })
-    return () => {
-      active = false
-      controller.abort()
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [open, documentPath, src, attempt])
-
-  const previewSrc = documentPath ? documentPreview?.source === src ? documentPreview.url : undefined : src
+    setResult(undefined)
+    const preview = legacyPath
+      ? api.get<Blob>(legacyPath, { responseType: 'blob' }).then(({ data }) => {
+        if (!active) return ''
+        objectUrl = URL.createObjectURL(data)
+        return objectUrl
+      })
+      : resolvePreviewUrl(src)
+    preview.then(url => {
+      if (active) setResult({ source: src, url })
+    }).catch(() => { if (active) setResult({ source: src, failed: true }) })
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [src, open, attempt, legacyPath])
+  const current = result?.source === src ? result : remote ? undefined : { source: src, url: src }
+  const loading = !current
   return <>
-    <button type="button" className="text-xs font-semibold text-primary-700 underline" onClick={() => { setFailed(false); setOpen(true) }} aria-label={`Preview ${name}`}>Preview</button>
+    <button type="button" className="text-xs font-semibold text-primary-700 underline" onClick={() => { setResult(undefined); setOpen(true) }} aria-label={`Preview ${name}`}>Preview</button>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-3xl">
         <DialogTitle>{name}</DialogTitle>
         <DialogDescription>Preview of your uploaded file.</DialogDescription>
-        {documentPath && loadError ? <div role="alert"><p>Could not load the document. Check your access and try again.</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Retry preview</button></div>
-          : !previewSrc ? <p role="status">Loading document…</p>
-          : isPdf ? <object data={previewSrc} type="application/pdf" className="w-full h-[65vh] mt-4"><p>PDF preview is unavailable in this browser.</p></object>
-          : failed ? <p role="status">Preview could not be loaded. Try replacing the file.</p>
-            : <img src={previewSrc} alt={name} className="mt-4 max-h-[65vh] w-full object-contain" onError={() => setFailed(true)} />}
-        {documentPath && previewSrc && !loadError && <a href={previewSrc} download={name} className="text-xs font-semibold text-primary-700 underline">Download document</a>}
+        {loading ? <p role="status">Loading preview...</p> : current.failed ? <div><p role="alert">Preview unavailable. Your upload has been kept.</p><button type="button" className="mt-3 text-primary-700 underline" onClick={() => setAttempt(a => a + 1)}>Retry preview</button></div> : isPdf ? <object data={current.url} type="application/pdf" className="w-full h-[65vh] mt-4"><p>PDF preview is unavailable in this browser.</p></object>
+          : <img src={current.url} alt={name} className="mt-4 max-h-[65vh] w-full object-contain" onError={() => setResult({ source: src, failed: true })} />}
+        {legacyPath && current?.url && !current.failed && <a href={current.url} download={name}>Download document</a>}
       </DialogContent>
     </Dialog>
   </>

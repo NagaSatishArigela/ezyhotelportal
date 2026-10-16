@@ -19,6 +19,9 @@ import { dormitorySchema, otherAccommodationSchema, type DormitoryDetails, type 
 
 // ── Accumulated portal stepData (matches onboarding.store) ───────────────────
 
+import { AMENITY_IDS, normalizeAmenity } from './amenity-catalog'
+import { requiredBookingPolicy, type PropertyDetails } from './property-details'
+
 export type PortalStepData = Partial<
   Record<1 | 2 | 3 | 4 | 5 | 6 | 7, Record<string, unknown>>
 >
@@ -34,6 +37,7 @@ interface PortalStep1 {
 interface PortalStep2 {
   receptionMobile?: string
   receptionLandline?: string
+  detailsByType?: Record<string, PropertyDetails>
   propertyName?: string
   propertyType?: string
   otherAccommodation?: Partial<OtherAccommodation>
@@ -95,6 +99,7 @@ interface PortalStep4 {
   houseRules?: PortalHouseRules
 }
 interface PortalStep6 {
+  accountType?: string
   accountHolderName?: string
   accountNumber?: string
   ifscCode?: string
@@ -109,6 +114,7 @@ export interface ServerStep1Payload {
   receptionMobile?: string
   receptionLandline?: string | null
   otherAccommodation?: OtherAccommodation
+  propertyDetails?: PropertyDetails
   propertyName?: string
   propertyType?: string
   bookingPolicy?: string
@@ -173,6 +179,7 @@ export interface ServerDocument {
   expiresAt?: string
 }
 export interface ServerStep5Payload {
+  accountType?: string
   gstin?: string
   legalBusinessName?: string
   pan?: string
@@ -231,13 +238,8 @@ const HOUSE_RULE_ENUMS: Record<string, Set<string>> = {
   id_proof_required: new Set(['yes', 'no']),
 }
 
-// Contract §2 canonical amenity vocabulary — the portal picker already uses
-// these ids, but we filter to the frozen set defensively.
-const CANONICAL_AMENITIES = new Set([
-  'wifi', 'ac', 'parking', 'pool', 'gym', 'restaurant', 'bar', 'spa',
-  'reception_24', 'room_service', 'laundry', 'conference', 'rooftop',
-  'couples', 'pets', 'wheelchair', 'cctv', 'ev_charging',
-])
+// Includes retired IDs so editing existing drafts does not discard selections.
+const CANONICAL_AMENITIES = new Set(AMENITY_IDS)
 
 // Contract §Step 4 Photo.category vocabulary.
 const PHOTO_CATEGORIES = new Set<ServerPhoto['category']>([
@@ -247,8 +249,8 @@ const PHOTO_CATEGORIES = new Set<ServerPhoto['category']>([
 // Contract §3 DocumentType enum — filtered defensively so only valid types
 // reach the server (portal maps docId → DocumentType before storing).
 const DOCUMENT_TYPES = new Set([
-  'owner_photo', 'id_proof', 'pan_card', 'gstin_certificate', 'rental_agreement',
-  'fire_safety_cert', 'fssai_license', 'trade_license', 'partnership_deed',
+  'owner_photo', 'id_proof', 'id_proof_back', 'pan_card', 'gstin_certificate', 'rental_agreement',
+  'fire_safety_cert', 'fssai_license', 'trade_license', 'udyam_certificate', 'partnership_deed',
   'incorporation_certificate', 'board_resolution', 'llp_agreement',
   'cancelled_cheque', 'other',
 ])
@@ -299,7 +301,8 @@ export function mapStep1(data: PortalStepData): ServerStep1Payload {
     const details = otherAccommodationSchema.safeParse(s2.otherAccommodation)
     if (details.success) out.otherAccommodation = details.data
   }
-  putStr(out, 'bookingPolicy', s2.bookingPolicy)
+  putStr(out, 'bookingPolicy', requiredBookingPolicy(s2.propertyType ?? '') ?? s2.bookingPolicy)
+  out.propertyDetails = s2.detailsByType?.[s2.propertyType ?? ''] ?? {}
   if (s1.businessEntity && BUSINESS_ENTITY_MAP[s1.businessEntity]) {
     out.businessEntity = BUSINESS_ENTITY_MAP[s1.businessEntity]
   }
@@ -350,8 +353,8 @@ export function mapStep3(data: PortalStepData): ServerStep3Payload {
       }
       if (typeof r.count === 'number') room.count = r.count
       if (typeof r.maxOccupancy === 'number') room.maxOccupancy = r.maxOccupancy
-      if (typeof r.hourlyRate === 'number') room.hourlyRate = r.hourlyRate
-      if (typeof r.fulldayRate === 'number') room.fulldayRate = r.fulldayRate
+      if (s2.propertyType !== 'pg' && typeof r.hourlyRate === 'number') room.hourlyRate = r.hourlyRate
+      if (s2.propertyType !== 'banquet' && typeof r.fulldayRate === 'number') room.fulldayRate = r.fulldayRate
       return room
     })
   }
@@ -368,9 +371,11 @@ export function mapStep3(data: PortalStepData): ServerStep3Payload {
   if (typeof s4.seatingCapacity === 'number' && Number.isFinite(s4.seatingCapacity)) {
     out.seatingCapacity = s4.seatingCapacity
   }
+  const banquetSeating = s2.detailsByType?.banquet?.seatingCapacity
+  if (s2.propertyType === 'banquet' && typeof banquetSeating === 'number') out.seatingCapacity = banquetSeating
 
   if (Array.isArray(s2.amenities)) {
-    const ids = s2.amenities.filter((a) => CANONICAL_AMENITIES.has(a))
+    const ids = [...new Set(s2.amenities.map(normalizeAmenity).filter((a) => CANONICAL_AMENITIES.has(a)))]
     if (ids.length > 0) out.amenities = ids
   }
 
@@ -441,7 +446,7 @@ export function mapStep5(data: PortalStepData): ServerStep5Payload {
   const s6 = (data[6] ?? {}) as PortalStep6
   const out: ServerStep5Payload = {}
 
-  putStr(out, 'gstin', s1.gstNumber)
+  putStr(out, 'gstin', s1.gstNumber?.trim().toUpperCase())
   putStr(out, 'legalBusinessName', s1.businessName)
   if (typeof s6.pan === 'string' && s6.pan.trim() !== '') {
     out.pan = s6.pan.trim().toUpperCase()
@@ -451,6 +456,7 @@ export function mapStep5(data: PortalStepData): ServerStep5Payload {
     out.ifsc = s6.ifscCode.trim().toUpperCase()
   }
   putStr(out, 'accountHolderName', s6.accountHolderName)
+  putStr(out, 'accountType', s6.accountType)
   if (s6.tcAccepted === true) out.tcAccepted = true
   if (s6.formCAcknowledged === true) out.formCAcknowledged = true
 
@@ -505,7 +511,7 @@ export function mapServerStep(
 // DTO-required fields per server step (submit-time conditional fields like
 // minBookingHours / hourlyRate are NOT required at step-save time).
 const SERVER_STEP_REQUIRED: Record<number, string[]> = {
-  1: ['propertyName', 'propertyType', 'bookingPolicy', 'businessEntity', 'ownerFirstName', 'ownerLastName', 'category'],
+  1: ['propertyName', 'propertyType', 'bookingPolicy', 'businessEntity', 'ownerFirstName', 'category'],
   2: ['latitude', 'longitude', 'addressLine1', 'addressLine2', 'pincode', 'city', 'state'],
   3: [], // custom check below (rooms + amenities + houseRules)
   4: [], // custom check below (>=1 photo)

@@ -23,8 +23,8 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 })
 
 vi.mock('@/store/auth.store', () => ({
-  useAuthStore: (selector: (s: { setAuth: ReturnType<typeof vi.fn> }) => unknown) =>
-    selector({ setAuth: mockSetAuth }),
+  useAuthStore: Object.assign((selector: (s: { setAuth: ReturnType<typeof vi.fn> }) => unknown) =>
+    selector({ setAuth: mockSetAuth }), { getState: () => ({ user: null }) }),
 }))
 
 function renderLogin() {
@@ -50,13 +50,10 @@ describe('LoginPage', () => {
     expect(screen.getByText('Forgot password?')).toBeInTheDocument()
   })
 
-  it('renders all 5 demo account buttons', () => {
+  it('does not expose demo account credentials', () => {
     renderLogin()
-    expect(screen.getByTestId('demo-owner')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-approved')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-admin')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-support')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-superadmin')).toBeInTheDocument()
+    expect(screen.queryByText(/Demo accounts/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/demo1234/i)).not.toBeInTheDocument()
   })
 
   it('shows validation error for invalid email', async () => {
@@ -80,19 +77,24 @@ describe('LoginPage', () => {
     })
   })
 
-  it('clicking a demo button fills the email field', async () => {
-    const user = userEvent.setup()
+  it('leaves credentials empty for manual sign in', () => {
     renderLogin()
-    await user.click(screen.getByTestId('demo-owner'))
-    expect((screen.getByTestId('email-input') as HTMLInputElement).value).toBe('owner@demo.com')
+    expect((screen.getByTestId('email-input') as HTMLInputElement).value).toBe('')
+    expect((screen.getByTestId('password-input') as HTMLInputElement).value).toBe('')
   })
 
-  it('calls authApi.login with correct credentials', async () => {
+  it('calls portalLogin with correct credentials', async () => {
     const user = userEvent.setup()
     const loginSpy = vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
-        id: 'u1', name: 'Ravi Sharma', email: 'owner@demo.com', phone: '', role: 'owner',
-        avatarInitials: 'RS', onboardingStatus: 'in_progress', onboardingStep: 1,
+        id: 'u1',
+        name: 'Ravi Sharma',
+        email: 'owner@demo.com',
+        phone: '',
+        role: 'applicant',
+        avatarInitials: 'RS',
+        onboardingStatus: 'in_progress',
+        onboardingStep: 1,
       },
       token: 'mock.token', refreshToken: 'mock.refresh',
     })
@@ -104,12 +106,18 @@ describe('LoginPage', () => {
     expect(mockSetAuth).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1' }), 'mock.token', false, 'mock.refresh')
   })
 
-  it('navigates to onboarding on owner in-progress login', async () => {
+  it('navigates to hotel selection after applicant login', async () => {
     const user = userEvent.setup()
     vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
-        id: 'u1', name: 'Ravi Sharma', email: 'owner@demo.com', phone: '', role: 'owner',
-        avatarInitials: 'RS', onboardingStatus: 'in_progress', onboardingStep: 1,
+        id: 'u1',
+        name: 'Ravi Sharma',
+        email: 'owner@demo.com',
+        phone: '',
+        role: 'owner',
+        avatarInitials: 'RS',
+        onboardingStatus: 'in_progress',
+        onboardingStep: 1,
       },
       token: 'mock.token', refreshToken: 'mock.refresh',
     })
@@ -118,15 +126,32 @@ describe('LoginPage', () => {
     await user.type(screen.getByTestId('password-input'), 'demo1234')
     await user.click(screen.getByTestId('login-button'))
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/owner/onboarding/step1' })
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/owner/access' })
     })
+  })
+
+  it('continues to onboarding after login from the listing entry', async () => {
+    const user = userEvent.setup()
+    vi.mocked(portalLogin).mockResolvedValueOnce({
+      user: { id: 'u1', name: 'Applicant', email: 'owner@demo.com', phone: '', role: 'applicant', avatarInitials: 'A' },
+      token: 'mock.token', refreshToken: 'mock.refresh',
+    })
+    render(<LoginPage listingProperty />)
+    await user.type(screen.getByTestId('email-input'), 'owner@demo.com')
+    await user.type(screen.getByTestId('password-input'), 'demo1234')
+    await user.click(screen.getByTestId('login-button'))
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith({ to: '/list-property' }))
   })
 
   it('navigates to admin on admin login', async () => {
     const user = userEvent.setup()
     vi.mocked(portalLogin).mockResolvedValueOnce({
       user: {
-        id: 'u2', name: 'Ankit Verma', email: 'admin@demo.com', phone: '', role: 'admin',
+        id: 'u2',
+        name: 'Ankit Verma',
+        email: 'admin@demo.com',
+        phone: '',
+        role: 'admin',
         avatarInitials: 'AV',
       },
       token: 'mock.token', refreshToken: 'mock.refresh',

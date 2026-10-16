@@ -9,6 +9,7 @@ vi.mock('@/lib/portal-api', () => ({
   uploadFile: vi.fn(), saveOnboardingStep: vi.fn(), createPropertyDraft: vi.fn(),
   submitOnboarding: vi.fn(), verifyIFSC: vi.fn(), pennyDrop: vi.fn(), verifyPincode: vi.fn(),
 }))
+vi.mock('@/lib/save-application', () => ({ saveApplicationProgress: vi.fn().mockResolvedValue(undefined) }))
 
 const facilities = {
   type: 'container_home', numberOfBeds: 3,

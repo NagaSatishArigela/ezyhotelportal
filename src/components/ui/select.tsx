@@ -8,7 +8,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, error, children, ...props }, ref) => (
-    <div className="relative">
+    <div className={cn('relative w-full', className)}>
       <select
         ref={ref}
         className={cn(
@@ -16,8 +16,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           error
             ? 'border-error-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'
             : 'border-border focus:border-primary-600 focus:shadow-[0_0_0_3px_rgba(240,90,0,0.15)]',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          className
+          'disabled:opacity-50 disabled:cursor-not-allowed'
         )}
         {...props}
       >

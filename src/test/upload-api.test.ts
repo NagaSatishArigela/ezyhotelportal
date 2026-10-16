@@ -6,6 +6,17 @@ import { useOnboardingStore } from '@/store/onboarding.store'
 
 beforeEach(() => { vi.restoreAllMocks(); useOnboardingStore.getState().reset() })
 
+it('explains upload throttling without attempting a storage upload or clearing saved files', async () => {
+  useOnboardingStore.getState().saveStepData(5, { docUrls: { pan: 'https://files.test/pan.pdf' } })
+  const error = new AxiosError('Too Many Requests')
+  error.response = { status: 429, data: {}, statusText: 'Too Many Requests', headers: {}, config: {} as never }
+  vi.spyOn(api, 'post').mockRejectedValue(error)
+  const fetchSpy = vi.spyOn(globalThis, 'fetch')
+  await expect(uploadFile(new File(['pdf'], 'fssai.pdf', { type: 'application/pdf' }), 'draft', 'document')).rejects.toThrow('Upload limit reached')
+  expect(fetchSpy).not.toHaveBeenCalled()
+  expect(useOnboardingStore.getState().stepData[5]?.docUrls).toEqual({ pan: 'https://files.test/pan.pdf' })
+})
+
 it('surfaces the Railway nested 403 error without attempting a storage upload', async () => {
   const error = new AxiosError('Forbidden')
   error.response = { status: 403, data: { success: false, error: { message: 'Insufficient property role' } }, statusText: 'Forbidden', headers: {}, config: {} as never }

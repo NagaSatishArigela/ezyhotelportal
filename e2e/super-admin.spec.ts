@@ -121,7 +121,8 @@ async function loginAsSuperAdmin(page: Page) {
   await page.goto('/login')
   await page.evaluate(() => localStorage.removeItem('stayflex-auth'))
   await page.goto('/login')
-  await page.getByTestId('demo-superadmin').click()
+  await page.getByTestId('email-input').fill('superadmin@demo.com')
+  await page.getByTestId('password-input').fill('demo1234')
   await page.getByTestId('login-button').click()
   await expect(page).toHaveURL('/super-admin/dashboard', { timeout: 5000 })
 }

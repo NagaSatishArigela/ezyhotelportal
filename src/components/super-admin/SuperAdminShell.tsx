@@ -8,9 +8,17 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 const NAV_ITEMS = [
-  { href: '/super-admin/dashboard', label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/super-admin/admins',    label: 'Admin Users', icon: Users },
-  { href: '/super-admin/settings',  label: 'Settings',    icon: Settings },
+  { href: '/super-admin/users', label: 'All users', icon: Users },
+  { href: '/super-admin/properties', label: 'Hotels & owners', icon: LayoutDashboard },
+  { href: '/super-admin/verification', label: 'Property approvals', icon: LayoutDashboard },
+  { href: '/super-admin/bookings', label: 'All bookings', icon: LayoutDashboard },
+  { href: '/super-admin/disputes', label: 'Disputes', icon: LayoutDashboard },
+  { href: '/super-admin/reviews', label: 'Reviews', icon: LayoutDashboard },
+  { href: '/super-admin/payouts', label: 'Payouts', icon: LayoutDashboard },
+  { href: '/super-admin/tickets', label: 'Support tickets', icon: LayoutDashboard },
+  { href: '/super-admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/super-admin/admins', label: 'Admin Users', icon: Users },
+  { href: '/super-admin/settings', label: 'Settings', icon: Settings },
 ]
 
 export function SuperAdminShell({ children }: { children: React.ReactNode }) {
@@ -20,11 +28,12 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
   const toggle = useUIStore((s) => s.toggleSidebar)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
-  const initials = (user?.name ?? user?.phone ?? 'SA')
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('') || 'SA'
+  const initials =
+    (user?.name ?? user?.phone ?? 'SA')
+      .split(' ')
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? '')
+      .join('') || 'SA'
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -33,18 +42,24 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
         <aside
           className={cn(
             'flex flex-col border-r border-border bg-white transition-all duration-200',
-            collapsed ? 'w-16' : 'w-56',
+            collapsed ? 'w-16' : 'w-56'
           )}
         >
           {/* Logo */}
-          <div className={cn('flex h-16 items-center border-b border-border px-4', collapsed && 'justify-center px-0')}>
+          <div
+            className={cn(
+              'flex h-16 items-center border-b border-border px-4',
+              collapsed && 'justify-center px-0'
+            )}
+          >
             {collapsed ? (
               <EzyMark size={26} aria-label="EzyHotels Super Admin" />
             ) : (
               <div className="flex items-center gap-2 select-none">
                 <EzyMark size={28} className="shrink-0" />
                 <span className="font-display font-bold leading-none">
-                  <EzyWordmark /><br />
+                  <EzyWordmark />
+                  <br />
                   <span className="text-xs font-semibold text-primary-600 tracking-widest uppercase">
                     Super Admin
                   </span>
@@ -67,24 +82,31 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
                         collapsed && 'justify-center px-0',
                         active
                           ? 'bg-primary-50 text-primary-600'
-                          : 'text-navy-600 hover:bg-navy-50 hover:text-navy-900',
+                          : 'text-navy-600 hover:bg-navy-50 hover:text-navy-900'
                       )}
                       aria-current={active ? 'page' : undefined}
                     >
-                      <Icon size={18} className={cn('shrink-0', active && 'text-primary-600')} aria-hidden />
+                      <Icon
+                        size={18}
+                        className={cn('shrink-0', active && 'text-primary-600')}
+                        aria-hidden
+                      />
                       {!collapsed && <span>{label}</span>}
                     </Link>
                   </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right">{label}</TooltipContent>
-                  )}
+                  {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
                 </Tooltip>
               )
             })}
           </nav>
 
           {/* User row */}
-          <div className={cn('border-t border-border p-3', collapsed && 'flex flex-col items-center gap-2 p-2')}>
+          <div
+            className={cn(
+              'border-t border-border p-3',
+              collapsed && 'flex flex-col items-center gap-2 p-2'
+            )}
+          >
             {!collapsed && (
               <div className="flex items-center gap-2 mb-2">
                 <Avatar className="h-7 w-7">
@@ -93,7 +115,9 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-navy-900">{user?.name ?? user?.phone}</p>
+                  <p className="truncate text-xs font-semibold text-navy-900">
+                    {user?.name ?? user?.phone}
+                  </p>
                   <p className="text-[10px] text-navy-400 uppercase tracking-wide">Super Admin</p>
                 </div>
               </div>
@@ -101,10 +125,13 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => { logout(); navigate({ to: '/login' }) }}
+                  onClick={() => {
+                    logout()
+                    navigate({ to: '/login' })
+                  }}
                   className={cn(
                     'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-navy-500 hover:bg-navy-50 hover:text-error-600 transition-colors',
-                    collapsed ? 'w-full justify-center' : 'w-full',
+                    collapsed ? 'w-full justify-center' : 'w-full'
                   )}
                   aria-label="Sign out"
                   data-testid="super-admin-logout-btn"
@@ -143,9 +170,7 @@ export function SuperAdminShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 overflow-auto p-6 lg:p-8">
-            {children}
-          </main>
+          <main className="flex-1 overflow-auto p-6 lg:p-8">{children}</main>
         </div>
       </div>
     </TooltipProvider>

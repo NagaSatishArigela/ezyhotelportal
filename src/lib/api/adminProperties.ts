@@ -76,6 +76,7 @@ export interface AdminPropertyDetail {
     receptionMobile?: string | null
     receptionLandline?: string | null
     propertyType: string | null
+    propertyDetails?: Record<string, unknown> | null
     bookingPolicy: string | null
     category: string | null
     description: string | null

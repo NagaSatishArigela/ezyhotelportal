@@ -1,4 +1,7 @@
+import { useOnboardingStore } from '@/store/onboarding.store'
+import { queryClient } from '@/lib/queryClient'
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,83 +17,93 @@ import { FieldWrapper } from '@/components/shared/FieldWrapper'
 import { cn } from '@/lib/utils'
 
 const loginSchema = z.object({
-  email:      z.string().email('Enter a valid email address'),
-  password:   z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   rememberMe: z.boolean().optional(),
 })
 type LoginForm = z.infer<typeof loginSchema>
 
-const DEMO_ACCOUNTS = [
-  { label: 'Owner — Onboarding', email: 'owner@demo.com',       colorCls: 'bg-primary-50 text-primary-700 hover:bg-primary-100' },
-  { label: 'Owner — Approved',   email: 'approved@demo.com',    colorCls: 'bg-success-50 text-success-700 hover:bg-success-50' },
-  { label: 'Admin',              email: 'admin@demo.com',       colorCls: 'bg-navy-100 text-navy-700 hover:bg-navy-200' },
-  { label: 'Support',            email: 'support@demo.com',     colorCls: 'bg-teal-50 text-teal-700 hover:bg-teal-100' },
-  { label: 'Super Admin',        email: 'superadmin@demo.com',  colorCls: 'bg-navy-800 text-white hover:bg-navy-700' },
-]
-
 const BRAND_FEATURES = [
-  { icon: TrendingUp,    text: 'Real-time bookings & revenue dashboard' },
-  { icon: IndianRupee,   text: 'Fast D+1 settlements with TDS tracking' },
-  { icon: Clock,         text: 'Hourly & overnight pricing in one place' },
-  { icon: Shield,        text: 'RBI-compliant KYC & secure payouts' },
+  { icon: TrendingUp, text: 'Real-time bookings & revenue dashboard' },
+  { icon: IndianRupee, text: 'Fast D+1 settlements with TDS tracking' },
+  { icon: Clock, text: 'Hourly & overnight pricing in one place' },
+  { icon: Shield, text: 'RBI-compliant KYC & secure payouts' },
 ]
 
-export function LoginPage() {
-  const navigate   = useNavigate()
-  const setAuth    = useAuthStore((s) => s.setAuth)
+export function LoginPage({ listingProperty = false }: { listingProperty?: boolean }) {
+  const navigate = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
   const [showPwd, setShowPwd] = useState(false)
   const [shaking, setShaking] = useState(false)
   const [apiError, setApiError] = useState(false)
+  const [retryAt, setRetryAt] = useState(0)
+  const [retrySeconds, setRetrySeconds] = useState(0)
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
-    useForm<LoginForm>({
-      resolver: zodResolver(loginSchema),
-      defaultValues: { rememberMe: false },
-    })
+  useEffect(() => {
+    if (!retryAt) return
+    const tick = () => setRetrySeconds(Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)))
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [retryAt])
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { rememberMe: false },
+  })
 
   // Single shake trigger — fires on validation errors OR API errors
   useEffect(() => {
     const hasError = Object.keys(errors).length > 0 || apiError
     if (!hasError) return
     setShaking(true)
-    const t = setTimeout(() => { setShaking(false); setApiError(false) }, 500)
+    const t = setTimeout(() => {
+      setShaking(false)
+      setApiError(false)
+    }, 500)
     return () => clearTimeout(t)
   }, [errors, apiError])
 
   const onSubmit = async ({ email, password, rememberMe }: LoginForm) => {
+    if (Date.now() < retryAt) return
     try {
       const { user, token, refreshToken } = await portalLogin(email, password)
+      if (useAuthStore.getState().user?.id !== user.id) useOnboardingStore.getState().reset()
+      queryClient.clear()
       setAuth(user, token, rememberMe, refreshToken)
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`)
 
       if (user.role === 'super_admin') return navigate({ to: '/super-admin/dashboard' })
-      if (user.role === 'admin')   return navigate({ to: '/admin/verification' })
+      if (user.role === 'admin') return navigate({ to: '/admin/verification' })
       if (user.role === 'support') return navigate({ to: '/support/dashboard' })
 
-      // Owner: route by onboarding status
-      const s = user.onboardingStatus
-      if (s === 'approved') return navigate({ to: '/owner/dashboard' })
-      if (s === 'submitted' || s === 'under_review' || s === 'revision_requested' || s === 'rejected')
-        return navigate({ to: '/owner/status' })
-      navigate({ to: '/owner/onboarding/step1' })
+      navigate({ to: listingProperty ? '/list-property' : '/owner/access' })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Login failed')
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const value = err.response.headers['retry-after']
+        const seconds = Number(value)
+        const delay = Number.isFinite(seconds) && seconds > 0
+          ? seconds * 1000 : Date.parse(String(value)) - Date.now()
+        const wait = Number.isFinite(delay) && delay > 0 ? delay : 60_000
+        setRetryAt(Date.now() + wait)
+        setRetrySeconds(Math.ceil(wait / 1000))
+        toast.error('Too many sign-in attempts. Please wait before trying again.')
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Login failed')
+      }
       setApiError(true)
     }
   }
 
-  const fillDemo = (email: string) => {
-    setValue('email', email, { shouldValidate: false })
-    setValue('password', 'demo1234', { shouldValidate: false })
-  }
-
   return (
     <div className="min-h-screen flex">
-
       {/* ── Left: form panel ── */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 bg-white overflow-y-auto">
         <div className="w-full max-w-sm">
-
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-9">
             <EzyMark size={38} className="shrink-0" />
@@ -101,16 +114,13 @@ export function LoginPage() {
           </div>
 
           <h1 className="font-display font-bold text-[26px] text-navy-900 mb-1">Welcome back</h1>
-          <p className="text-sm text-navy-500 mb-7">Sign in to manage your property</p>
+          <p className="text-sm text-navy-500 mb-7">{listingProperty ? 'Sign in to start or continue listing your property' : 'Sign in to manage your property'}</p>
 
           {/* Form */}
           <form
             onSubmit={handleSubmit(onSubmit)}
             noValidate
-            className={cn(
-              'space-y-4',
-              shaking && 'animate-[shake_0.4s_ease-in-out]'
-            )}
+            className={cn('space-y-4', shaking && 'animate-[shake_0.4s_ease-in-out]')}
           >
             <FieldWrapper label="Email address" error={errors.email?.message} required>
               <Input
@@ -168,48 +178,24 @@ export function LoginPage() {
               type="submit"
               block
               loading={isSubmitting}
+              disabled={retrySeconds > 0}
               className="mt-1"
               data-testid="login-button"
             >
-              Sign in
+              {retrySeconds > 0 ? `Try again in ${retrySeconds}s` : 'Sign in'}
             </Button>
           </form>
 
-          {/* Demo accounts — only shown in development builds */}
-          {import.meta.env.DEV && (
-            <div className="mt-8 pt-6 border-t border-border">
-              <p className="text-xs font-bold text-navy-400 uppercase tracking-wider mb-3">
-                Demo accounts — click to fill
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => fillDemo(acc.email)}
-                    className={cn(
-                      'rounded-lg px-3 py-2 text-xs font-semibold text-left transition-colors',
-                      acc.colorCls
-                    )}
-                    data-testid={`demo-${acc.email.split('@')[0]}`}
-                  >
-                    {acc.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-navy-300 mt-2">
-                Password for all:{' '}
-                <span className="font-mono bg-navy-50 px-1 rounded text-navy-500">demo1234</span>
-              </p>
-            </div>
-          )}
         </div>
       </div>
 
       {/* ── Right: brand panel ── */}
       <div
         className="hidden lg:flex flex-1 flex-col items-center justify-center p-12 text-white relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%)' }}
+        style={{
+          background:
+            'linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%)',
+        }}
         aria-hidden="true"
       >
         {/* Background decoration */}
@@ -226,7 +212,8 @@ export function LoginPage() {
             Grow your property business with EzyHotels
           </h2>
           <p className="text-white/75 text-base leading-relaxed mb-8">
-            India's fastest-growing hourly & overnight booking platform for hotels, resorts, and homestays.
+            India's fastest-growing hourly & overnight booking platform for hotels, resorts, and
+            homestays.
           </p>
 
           {/* Feature list */}
@@ -260,7 +247,6 @@ export function LoginPage() {
           </div>
         </div>
       </div>
-
     </div>
   )
 }

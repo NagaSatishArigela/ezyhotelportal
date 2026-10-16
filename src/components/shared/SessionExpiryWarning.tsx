@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { Clock } from 'lucide-react'
-import axios from 'axios'
 import { useAuthStore } from '@/store/auth.store'
 import { useSessionExpiry } from '@/hooks/useSessionExpiry'
 import { useNavigate } from '@tanstack/react-router'
 
 export function SessionExpiryWarning() {
-  const { refreshToken, setToken, setRefreshToken, logout } = useAuthStore()
+  const { logout } = useAuthStore()
   const [extending, setExtending] = useState(false)
   const navigate = useNavigate()
-  // When the countdown hits 0 the token is dead — log out and redirect so the
-  // UI can't linger in a fake-authenticated state.
-  const { showWarning, secondsLeft, dismiss } = useSessionExpiry(() => {
+  // Access-token expiry remains recoverable while the refresh session is valid.
+  const { showWarning, secondsLeft, retrySeconds, error, extend, dismiss } = useSessionExpiry(() => {
     logout()
     navigate({ to: '/login' })
   })
@@ -24,21 +22,10 @@ export function SessionExpiryWarning() {
   const isUrgent = secondsLeft <= 15
 
   const handleExtend = async () => {
-    if (!refreshToken) return
+    if (extending || retrySeconds > 0) return
     setExtending(true)
     try {
-      // Call refresh directly (not via api instance) to avoid re-entering the 401 interceptor
-      const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
-        `${import.meta.env.VITE_API_URL ?? '/api'}/auth/refresh-token`,
-        { refreshToken },
-      )
-      setToken(data.accessToken)
-      setRefreshToken(data.refreshToken)
-      dismiss()
-    } catch {
-      // Refresh failed — session truly expired; logout and redirect
-      logout()
-      navigate({ to: '/login' })
+      await extend()
     } finally {
       setExtending(false)
     }
@@ -51,21 +38,21 @@ export function SessionExpiryWarning() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/60 backdrop-blur-sm">
+    <div role="dialog" aria-modal="true" aria-labelledby="session-warning-title" className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/60 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-border">
         <div className="flex items-start gap-3 mb-5">
           <div className="flex-shrink-0 rounded-full bg-primary-50 p-2.5">
             <Clock className="h-5 w-5 text-primary-600" />
           </div>
           <div>
-            <p className="font-semibold text-navy-900">Session expiring soon</p>
+            <p id="session-warning-title" className="font-semibold text-navy-900">{secondsLeft > 0 ? 'Session expiring soon' : 'Session renewal interrupted'}</p>
             <p className="text-sm text-navy-600 mt-0.5">
               Stay logged in to keep working without interruption.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-center my-5">
+        {secondsLeft > 0 && <div className="flex items-center justify-center my-5">
           <span
             className={`text-6xl font-bold tabular-nums transition-colors ${
               isUrgent ? 'text-red-500' : 'text-primary-600'
@@ -73,17 +60,20 @@ export function SessionExpiryWarning() {
           >
             {display}
           </span>
-        </div>
+        </div>}
 
         <div className="flex flex-col gap-2">
+          {error && <p role="alert" className="text-sm text-error-600">{error}</p>}
           <button
+            type="button"
             onClick={handleExtend}
-            disabled={extending}
+            disabled={extending || retrySeconds > 0}
             className="w-full rounded-[10px] bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 transition-colors"
           >
-            {extending ? 'Extending session…' : 'Stay logged in'}
+            {extending ? 'Extending session…' : retrySeconds > 0 ? `Retrying in ${retrySeconds}s` : 'Stay logged in'}
           </button>
           <button
+            type="button"
             onClick={handleLogout}
             className="w-full rounded-[10px] border border-border bg-white px-4 py-2.5 text-sm font-semibold text-navy-600 hover:bg-navy-50 transition-colors"
           >

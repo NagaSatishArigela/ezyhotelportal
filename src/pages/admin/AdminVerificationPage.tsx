@@ -1,6 +1,7 @@
 import { DormitorySummary, OtherAccommodationSummary } from '@/components/shared/AccommodationSummary'
 import { PROPERTY_TYPES } from '@/lib/accommodation'
 import { FilePreview } from '@/components/shared/FilePreview'
+import { PropertyDetailsSummary } from '@/components/owner/PropertyDetailsSummary'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -182,6 +183,7 @@ function PropertyDetailDialog({ propertyId, onClose }: { propertyId: string; onC
             {property.propertyType === 'other' && property.otherAccommodation && <OtherAccommodationSummary value={property.otherAccommodation} />}
             {detail.roomTypes.filter((room) => room.type === 'dorm' && room.dormitory).map((room) => <DormitorySummary key={room.id} value={room.dormitory!} />)}
 
+            <PropertyDetailsSummary propertyType={property.propertyType ?? ''} value={property.propertyDetails} />
             {detail.roomTypes.length > 0 && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-navy-500 mb-2">Room types</p>

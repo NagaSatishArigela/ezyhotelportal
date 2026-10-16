@@ -2,8 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { getPropertyStatus, latestRevisionItems, type RevisionItem } from '@/lib/portal-api'
 import {
-  Clock, ArrowRight, CheckCircle2, Circle, Camera, Lock, AlertTriangle,
-  RefreshCw, LayoutDashboard, Phone,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Lock,
+  AlertTriangle,
+  RefreshCw,
+  LayoutDashboard,
+  Phone,
 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAuth } from '@/hooks/useAuth'
@@ -23,7 +30,6 @@ const STEPS = [
   { number: 7, label: 'Review & submit' },
 ]
 
-
 export function OwnerStatusPage() {
   const { onboardingStatus, user } = useAuth()
   const navigate = useNavigate()
@@ -37,29 +43,45 @@ export function OwnerStatusPage() {
 
   // The status endpoint is keyed on the property id. Prefer the local draft id,
   // fall back to the id carried on the authenticated user (set at login).
-  const propertyId = draftId ?? user?.propertyId ?? null
+  const propertyId = user?.propertyId ?? draftId ?? null
 
   // Refresh live status from backend if we have a property id
-  const [liveTimeline, setLiveTimeline] = useState<{ label: string; status: 'done' | 'current' | 'pending'; at: string | null }[]>([])
+  const [liveTimeline, setLiveTimeline] = useState<
+    { label: string; status: 'done' | 'current' | 'pending'; at: string | null }[]
+  >([])
   const [revisionItems, setRevisionItems] = useState<RevisionItem[]>([])
   const [revisionLoaded, setRevisionLoaded] = useState(false)
   useEffect(() => {
-    if (!propertyId) { setRevisionLoaded(true); return }
+    if (!propertyId) {
+      setRevisionLoaded(true)
+      return
+    }
+    let active = true
+    setRevisionLoaded(false)
+    setRevisionItems([])
     getPropertyStatus(propertyId)
       .then((res) => {
+        if (!active) return
         if (res.timeline) setLiveTimeline(res.timeline)
         setRevisionItems(latestRevisionItems(res.revisionNotes))
       })
-      .catch(() => { /* use static fallback */ })
-      .finally(() => setRevisionLoaded(true))
-  }, [propertyId])
+      .catch(() => {
+        /* use static fallback */
+      })
+      .finally(() => { if (active) setRevisionLoaded(true) })
+    return () => { active = false }
+  }, [propertyId, onboardingStatus])
   void liveTimeline // used by timeline renders below
 
-  const firstIncompleteStep = STEPS.find((s) => !completedSteps.includes(s.number))?.number ?? currentStep ?? 1
+  const firstIncompleteStep =
+    STEPS.find((s) => !completedSteps.includes(s.number))?.number ?? currentStep ?? 1
   const submittedLocally = completedSteps.includes(7)
 
   // ── Draft in Progress ─────────────────────────────────────────────────────
-  if ((onboardingStatus === 'in_progress' || onboardingStatus === 'not_started') && !submittedLocally) {
+  if (
+    (onboardingStatus === 'in_progress' || onboardingStatus === 'not_started') &&
+    !submittedLocally
+  ) {
     const doneCount = completedSteps.length
     const totalRequired = 7
 
@@ -67,7 +89,9 @@ export function OwnerStatusPage() {
       <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-primary-600">Onboarding</p>
-          <h1 className="font-display font-bold text-2xl text-navy-900 mt-1">Your application draft</h1>
+          <h1 className="font-display font-bold text-2xl text-navy-900 mt-1">
+            Your application draft
+          </h1>
           <p className="text-navy-500 text-sm mt-1">
             {doneCount === 0
               ? "You haven't started yet. Complete all 7 steps to go live."
@@ -104,31 +128,32 @@ export function OwnerStatusPage() {
                   onClick={() => navigate({ to: `/owner/onboarding/step${number}` as never })}
                   className={cn(
                     'w-full flex items-center gap-3 rounded-[10px] p-3 text-left transition-colors',
-                    done ? 'bg-success-50 hover:bg-success-50/80'
-                      : isCurrent ? 'bg-primary-50 border border-primary-200 hover:bg-primary-50/80'
-                      : 'bg-navy-50 hover:bg-navy-100',
+                    done
+                      ? 'bg-success-50 hover:bg-success-50/80'
+                      : isCurrent
+                        ? 'bg-primary-50 border border-primary-200 hover:bg-primary-50/80'
+                        : 'bg-navy-50 hover:bg-navy-100'
                   )}
                 >
-                  {done
-                    ? <CheckCircle2 size={18} className="text-success-700 shrink-0" />
-                    : isCurrent
-                    ? <Clock size={18} className="text-primary-600 shrink-0" />
-                    : <Circle size={18} className="text-navy-300 shrink-0" />
-                  }
+                  {done ? (
+                    <CheckCircle2 size={18} className="text-success-700 shrink-0" />
+                  ) : isCurrent ? (
+                    <Clock size={18} className="text-primary-600 shrink-0" />
+                  ) : (
+                    <Circle size={18} className="text-navy-300 shrink-0" />
+                  )}
                   <div className="flex-1">
-                    <span className={cn(
-                      'text-sm font-semibold',
-                      done ? 'text-success-700' : isCurrent ? 'text-primary-700' : 'text-navy-500'
-                    )}>
+                    <span
+                      className={cn(
+                        'text-sm font-semibold',
+                        done ? 'text-success-700' : isCurrent ? 'text-primary-700' : 'text-navy-500'
+                      )}
+                    >
                       Step {number} — {label}
                     </span>
                   </div>
-                  {isCurrent && (
-                    <Badge variant="amber">Continue here</Badge>
-                  )}
-                  {done && (
-                    <Badge variant="green">Done</Badge>
-                  )}
+                  {isCurrent && <Badge variant="amber">Continue here</Badge>}
+                  {done && <Badge variant="green">Done</Badge>}
                 </button>
               )
             })}
@@ -169,36 +194,18 @@ export function OwnerStatusPage() {
         {/* What's editable */}
         <div className="rounded-(--radius-lg) border border-border bg-white shadow-1 overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
-            <p className="font-semibold text-navy-900">What you can update during review</p>
+            <p className="font-semibold text-navy-900">Application sections during review</p>
             <p className="text-xs text-navy-500 mt-0.5">
-              Some sections are locked to protect the integrity of your KYC verification.
+              All sections are locked to protect the integrity of your application and KYC verification.
             </p>
           </div>
 
           <div className="divide-y divide-border">
-            {/* Photos — EDITABLE */}
-            <div className="flex items-center gap-4 px-5 py-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-success-50 text-success-700 shrink-0">
-                <Camera size={18} />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-navy-900 text-sm">Media & gallery</p>
-                <p className="text-xs text-navy-500 mt-0.5">
-                  Add better photos anytime — helps the admin see your property clearly.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => navigate({ to: '/owner/onboarding/step3' as never })}
-              >
-                Update photos
-              </Button>
-            </div>
-
-            {/* All other steps — LOCKED */}
+            {/* All application sections are locked during review. */}
             {[
               { label: 'Owner identity & business details', step: 1 },
               { label: 'Property info, amenities & pricing policy', step: 2 },
+              { label: 'Media & gallery', step: 3 },
               { label: 'Rooms & pricing', step: 4 },
               { label: 'Documents & KYC', step: 5 },
               { label: 'Bank & payouts', step: 6 },
@@ -225,10 +232,14 @@ export function OwnerStatusPage() {
             <p className="font-semibold text-navy-900 text-sm">Need to make urgent changes?</p>
             <p className="text-xs text-navy-500 mt-0.5">
               Contact your onboarding manager at{' '}
-              <a href="tel:+918049009000" className="text-primary-600 font-semibold hover:underline">
+              <a
+                href="tel:+918049009000"
+                className="text-primary-600 font-semibold hover:underline"
+              >
                 +91 80-4900-9000
               </a>{' '}
-              or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
+              or email{' '}
+              <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
             </p>
           </div>
         </div>
@@ -268,7 +279,10 @@ export function OwnerStatusPage() {
                 <p className="mt-2 text-sm text-navy-600">
                   Our team has requested changes. Review each section below, update the flagged
                   details, and resubmit. If you need specifics, contact your onboarding manager at{' '}
-                  <a href="tel:+918049009000" className="text-primary-600 font-semibold">+91 80-4900-9000</a>.
+                  <a href="tel:+918049009000" className="text-primary-600 font-semibold">
+                    +91 80-4900-9000
+                  </a>
+                  .
                 </p>
               ) : (
                 <p className="mt-2 text-sm text-navy-500">Loading reviewer notes…</p>
@@ -280,7 +294,9 @@ export function OwnerStatusPage() {
         {/* Quick links to fix each step */}
         <div className="rounded-(--radius-lg) border border-border bg-white p-5 shadow-1 space-y-3">
           <p className="font-semibold text-navy-900">Fix and resubmit</p>
-          <p className="text-xs text-navy-500">All sections are unlocked. Update the flagged items and submit again.</p>
+          <p className="text-xs text-navy-500">
+            All sections are unlocked. Update the flagged items and submit again.
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {STEPS.slice(0, 6).map(({ number, label }) => (
               <button
@@ -290,7 +306,9 @@ export function OwnerStatusPage() {
                 className="flex items-center gap-2.5 rounded-[10px] border border-border p-3 text-sm hover:bg-navy-50 hover:border-primary-300 transition-colors text-left"
               >
                 <RefreshCw size={14} className="text-primary-600 shrink-0" />
-                <span className="text-navy-700 font-medium">Step {number} — {label.split(' ').slice(0, 2).join(' ')}</span>
+                <span className="text-navy-700 font-medium">
+                  Step {number} — {label.split(' ').slice(0, 2).join(' ')}
+                </span>
               </button>
             ))}
           </div>
@@ -313,11 +331,7 @@ export function OwnerStatusPage() {
     return (
       <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
         <StatusTracker status="approved" referenceId={draftId ?? undefined} />
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={() => navigate({ to: '/owner/dashboard' })}
-        >
+        <Button className="w-full" size="lg" onClick={() => navigate({ to: '/owner/dashboard' })}>
           <LayoutDashboard size={18} className="mr-2" />
           Go to your dashboard
         </Button>
@@ -330,8 +344,12 @@ export function OwnerStatusPage() {
     return (
       <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
         <div>
-          <h1 className="font-display font-bold text-2xl text-navy-900">Application not approved</h1>
-          <p className="text-navy-500 text-sm mt-1">Unfortunately we couldn't approve this listing.</p>
+          <h1 className="font-display font-bold text-2xl text-navy-900">
+            Application not approved
+          </h1>
+          <p className="text-navy-500 text-sm mt-1">
+            Unfortunately we couldn't approve this listing.
+          </p>
         </div>
         <StatusTracker status="rejected" referenceId={draftId ?? undefined} />
         <div className="rounded-(--radius-lg) border border-border bg-white p-5 shadow-1">
@@ -339,8 +357,10 @@ export function OwnerStatusPage() {
           <p className="text-sm text-navy-600">
             Contact your onboarding manager to understand the reason and whether you can relist.
             Call{' '}
-            <a href="tel:+918049009000" className="text-primary-600 font-semibold">+91 80-4900-9000</a>
-            {' '}or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
+            <a href="tel:+918049009000" className="text-primary-600 font-semibold">
+              +91 80-4900-9000
+            </a>{' '}
+            or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
           </p>
         </div>
       </div>
@@ -353,7 +373,9 @@ export function OwnerStatusPage() {
       <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
         <div>
           <h1 className="font-display font-bold text-2xl text-navy-900">Listing suspended</h1>
-          <p className="text-navy-500 text-sm mt-1">Your property is not currently accepting bookings.</p>
+          <p className="text-navy-500 text-sm mt-1">
+            Your property is not currently accepting bookings.
+          </p>
         </div>
         <StatusTracker status="suspended" referenceId={draftId ?? undefined} />
         <div className="rounded-(--radius-lg) border border-border bg-white p-5 shadow-1">
@@ -361,8 +383,10 @@ export function OwnerStatusPage() {
           <p className="text-sm text-navy-600">
             Your listing has been suspended by our team. Contact your onboarding manager to
             understand the reason and how to reinstate it. Call{' '}
-            <a href="tel:+918049009000" className="text-primary-600 font-semibold">+91 80-4900-9000</a>
-            {' '}or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
+            <a href="tel:+918049009000" className="text-primary-600 font-semibold">
+              +91 80-4900-9000
+            </a>{' '}
+            or email <span className="text-primary-600 font-semibold">partners@ezyhotels.com</span>
           </p>
         </div>
       </div>

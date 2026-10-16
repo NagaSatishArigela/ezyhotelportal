@@ -3,6 +3,6 @@ import { requireApproved } from '@/lib/guardHelpers'
 import { OwnerAvailabilityPage } from '@/pages/owner/portal/OwnerPortalPages'
 
 export const Route = createFileRoute('/owner/_portal/availability')({
-  beforeLoad: requireApproved,
+  beforeLoad: () => requireApproved('/owner/availability'),
   component: OwnerAvailabilityPage,
 })

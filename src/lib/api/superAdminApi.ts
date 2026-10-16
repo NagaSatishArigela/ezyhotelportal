@@ -49,7 +49,7 @@ export interface PlatformSettings {
 export interface CreateAdminPayload {
   name: string
   phone: string
-  email?: string
+  email: string
 }
 
 export interface UpdateSettingsPayload {

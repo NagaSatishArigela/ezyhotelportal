@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ListPropertyRouteImport } from './routes/list-property'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OwnerRouteRouteImport } from './routes/owner/route'
 import { Route as SsoRouteImport } from './routes/sso'
@@ -28,11 +29,20 @@ import { Route as AdminVerificationRouteImport } from './routes/admin/verificati
 import { Route as OwnerPortalRouteImport } from './routes/owner/_portal'
 import { Route as OwnerOnboardingRouteRouteImport } from './routes/owner/onboarding/route'
 import { Route as SuperAdminAdminsRouteImport } from './routes/super-admin/admins'
+import { Route as SuperAdminBookingsRouteImport } from './routes/super-admin/bookings'
 import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
+import { Route as SuperAdminDisputesRouteImport } from './routes/super-admin/disputes'
+import { Route as SuperAdminPayoutsRouteImport } from './routes/super-admin/payouts'
+import { Route as SuperAdminPropertiesRouteImport } from './routes/super-admin/properties'
+import { Route as SuperAdminReviewsRouteImport } from './routes/super-admin/reviews'
 import { Route as SuperAdminSettingsRouteImport } from './routes/super-admin/settings'
+import { Route as SuperAdminTicketsRouteImport } from './routes/super-admin/tickets'
+import { Route as SuperAdminUsersRouteImport } from './routes/super-admin/users'
+import { Route as SuperAdminVerificationRouteImport } from './routes/super-admin/verification'
 import { Route as SupportDashboardRouteImport } from './routes/support/dashboard'
 import { Route as SupportTicketsRouteImport } from './routes/support/tickets'
 import { Route as SupportUsersRouteImport } from './routes/support/users'
+import { Route as OwnerPortalAccessRouteImport } from './routes/owner/_portal/access'
 import { Route as OwnerPortalAnalyticsRouteImport } from './routes/owner/_portal/analytics'
 import { Route as OwnerPortalAvailabilityRouteImport } from './routes/owner/_portal/availability'
 import { Route as OwnerPortalBookingsRouteImport } from './routes/owner/_portal/bookings'
@@ -44,6 +54,7 @@ import { Route as OwnerPortalReviewsRouteImport } from './routes/owner/_portal/r
 import { Route as OwnerPortalRoomsRouteImport } from './routes/owner/_portal/rooms'
 import { Route as OwnerPortalSettingsRouteImport } from './routes/owner/_portal/settings'
 import { Route as OwnerPortalStatusRouteImport } from './routes/owner/_portal/status'
+import { Route as OwnerPortalTeamRouteImport } from './routes/owner/_portal/team'
 import { Route as OwnerOnboardingStep1RouteImport } from './routes/owner/onboarding/step1'
 import { Route as OwnerOnboardingStep2RouteImport } from './routes/owner/onboarding/step2'
 import { Route as OwnerOnboardingStep3RouteImport } from './routes/owner/onboarding/step3'
@@ -65,6 +76,11 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListPropertyRoute = ListPropertyRouteImport.update({
+  id: '/list-property',
+  path: '/list-property',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -146,14 +162,54 @@ const SuperAdminAdminsRoute = SuperAdminAdminsRouteImport.update({
   path: '/admins',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
+const SuperAdminBookingsRoute = SuperAdminBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
 const SuperAdminDashboardRoute = SuperAdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
+const SuperAdminDisputesRoute = SuperAdminDisputesRouteImport.update({
+  id: '/disputes',
+  path: '/disputes',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminPayoutsRoute = SuperAdminPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminPropertiesRoute = SuperAdminPropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminReviewsRoute = SuperAdminReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
 const SuperAdminSettingsRoute = SuperAdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminTicketsRoute = SuperAdminTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminUsersRoute = SuperAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => SuperAdminRouteRoute,
+} as any)
+const SuperAdminVerificationRoute = SuperAdminVerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
   getParentRoute: () => SuperAdminRouteRoute,
 } as any)
 const SupportDashboardRoute = SupportDashboardRouteImport.update({
@@ -170,6 +226,11 @@ const SupportUsersRoute = SupportUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => SupportRouteRoute,
+} as any)
+const OwnerPortalAccessRoute = OwnerPortalAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
+  getParentRoute: () => OwnerPortalRoute,
 } as any)
 const OwnerPortalAnalyticsRoute = OwnerPortalAnalyticsRouteImport.update({
   id: '/analytics',
@@ -227,6 +288,11 @@ const OwnerPortalStatusRoute = OwnerPortalStatusRouteImport.update({
   path: '/status',
   getParentRoute: () => OwnerPortalRoute,
 } as any)
+const OwnerPortalTeamRoute = OwnerPortalTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => OwnerPortalRoute,
+} as any)
 const OwnerOnboardingStep1Route = OwnerOnboardingStep1RouteImport.update({
   id: '/step1',
   path: '/step1',
@@ -270,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/list-property': typeof ListPropertyRoute
   '/login': typeof LoginRoute
   '/sso': typeof SsoRoute
   '/owner/onboarding': typeof OwnerOnboardingRouteRouteWithChildren
@@ -282,11 +349,20 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/super-admin/admins': typeof SuperAdminAdminsRoute
+  '/super-admin/bookings': typeof SuperAdminBookingsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/disputes': typeof SuperAdminDisputesRoute
+  '/super-admin/payouts': typeof SuperAdminPayoutsRoute
+  '/super-admin/properties': typeof SuperAdminPropertiesRoute
+  '/super-admin/reviews': typeof SuperAdminReviewsRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/tickets': typeof SuperAdminTicketsRoute
+  '/super-admin/users': typeof SuperAdminUsersRoute
+  '/super-admin/verification': typeof SuperAdminVerificationRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
+  '/owner/access': typeof OwnerPortalAccessRoute
   '/owner/analytics': typeof OwnerPortalAnalyticsRoute
   '/owner/availability': typeof OwnerPortalAvailabilityRoute
   '/owner/bookings': typeof OwnerPortalBookingsRoute
@@ -298,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/owner/rooms': typeof OwnerPortalRoomsRoute
   '/owner/settings': typeof OwnerPortalSettingsRoute
   '/owner/status': typeof OwnerPortalStatusRoute
+  '/owner/team': typeof OwnerPortalTeamRoute
   '/owner/onboarding/step1': typeof OwnerOnboardingStep1Route
   '/owner/onboarding/step2': typeof OwnerOnboardingStep2Route
   '/owner/onboarding/step3': typeof OwnerOnboardingStep3Route
@@ -313,6 +390,7 @@ export interface FileRoutesByTo {
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/list-property': typeof ListPropertyRoute
   '/login': typeof LoginRoute
   '/sso': typeof SsoRoute
   '/owner/onboarding': typeof OwnerOnboardingRouteRouteWithChildren
@@ -325,11 +403,20 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/super-admin/admins': typeof SuperAdminAdminsRoute
+  '/super-admin/bookings': typeof SuperAdminBookingsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/disputes': typeof SuperAdminDisputesRoute
+  '/super-admin/payouts': typeof SuperAdminPayoutsRoute
+  '/super-admin/properties': typeof SuperAdminPropertiesRoute
+  '/super-admin/reviews': typeof SuperAdminReviewsRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/tickets': typeof SuperAdminTicketsRoute
+  '/super-admin/users': typeof SuperAdminUsersRoute
+  '/super-admin/verification': typeof SuperAdminVerificationRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
+  '/owner/access': typeof OwnerPortalAccessRoute
   '/owner/analytics': typeof OwnerPortalAnalyticsRoute
   '/owner/availability': typeof OwnerPortalAvailabilityRoute
   '/owner/bookings': typeof OwnerPortalBookingsRoute
@@ -341,6 +428,7 @@ export interface FileRoutesByTo {
   '/owner/rooms': typeof OwnerPortalRoomsRoute
   '/owner/settings': typeof OwnerPortalSettingsRoute
   '/owner/status': typeof OwnerPortalStatusRoute
+  '/owner/team': typeof OwnerPortalTeamRoute
   '/owner/onboarding/step1': typeof OwnerOnboardingStep1Route
   '/owner/onboarding/step2': typeof OwnerOnboardingStep2Route
   '/owner/onboarding/step3': typeof OwnerOnboardingStep3Route
@@ -357,6 +445,7 @@ export interface FileRoutesById {
   '/super-admin': typeof SuperAdminRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/list-property': typeof ListPropertyRoute
   '/login': typeof LoginRoute
   '/sso': typeof SsoRoute
   '/owner/onboarding': typeof OwnerOnboardingRouteRouteWithChildren
@@ -370,11 +459,20 @@ export interface FileRoutesById {
   '/admin/verification': typeof AdminVerificationRoute
   '/owner/_portal': typeof OwnerPortalRouteWithChildren
   '/super-admin/admins': typeof SuperAdminAdminsRoute
+  '/super-admin/bookings': typeof SuperAdminBookingsRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
+  '/super-admin/disputes': typeof SuperAdminDisputesRoute
+  '/super-admin/payouts': typeof SuperAdminPayoutsRoute
+  '/super-admin/properties': typeof SuperAdminPropertiesRoute
+  '/super-admin/reviews': typeof SuperAdminReviewsRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
+  '/super-admin/tickets': typeof SuperAdminTicketsRoute
+  '/super-admin/users': typeof SuperAdminUsersRoute
+  '/super-admin/verification': typeof SuperAdminVerificationRoute
   '/support/dashboard': typeof SupportDashboardRoute
   '/support/tickets': typeof SupportTicketsRoute
   '/support/users': typeof SupportUsersRoute
+  '/owner/_portal/access': typeof OwnerPortalAccessRoute
   '/owner/_portal/analytics': typeof OwnerPortalAnalyticsRoute
   '/owner/_portal/availability': typeof OwnerPortalAvailabilityRoute
   '/owner/_portal/bookings': typeof OwnerPortalBookingsRoute
@@ -386,6 +484,7 @@ export interface FileRoutesById {
   '/owner/_portal/rooms': typeof OwnerPortalRoomsRoute
   '/owner/_portal/settings': typeof OwnerPortalSettingsRoute
   '/owner/_portal/status': typeof OwnerPortalStatusRoute
+  '/owner/_portal/team': typeof OwnerPortalTeamRoute
   '/owner/onboarding/step1': typeof OwnerOnboardingStep1Route
   '/owner/onboarding/step2': typeof OwnerOnboardingStep2Route
   '/owner/onboarding/step3': typeof OwnerOnboardingStep3Route
@@ -403,6 +502,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/forgot-password'
+    | '/list-property'
     | '/login'
     | '/sso'
     | '/owner/onboarding'
@@ -415,11 +515,20 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/super-admin/admins'
+    | '/super-admin/bookings'
     | '/super-admin/dashboard'
+    | '/super-admin/disputes'
+    | '/super-admin/payouts'
+    | '/super-admin/properties'
+    | '/super-admin/reviews'
     | '/super-admin/settings'
+    | '/super-admin/tickets'
+    | '/super-admin/users'
+    | '/super-admin/verification'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
+    | '/owner/access'
     | '/owner/analytics'
     | '/owner/availability'
     | '/owner/bookings'
@@ -431,6 +540,7 @@ export interface FileRouteTypes {
     | '/owner/rooms'
     | '/owner/settings'
     | '/owner/status'
+    | '/owner/team'
     | '/owner/onboarding/step1'
     | '/owner/onboarding/step2'
     | '/owner/onboarding/step3'
@@ -446,6 +556,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/forgot-password'
+    | '/list-property'
     | '/login'
     | '/sso'
     | '/owner/onboarding'
@@ -458,11 +569,20 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/super-admin/admins'
+    | '/super-admin/bookings'
     | '/super-admin/dashboard'
+    | '/super-admin/disputes'
+    | '/super-admin/payouts'
+    | '/super-admin/properties'
+    | '/super-admin/reviews'
     | '/super-admin/settings'
+    | '/super-admin/tickets'
+    | '/super-admin/users'
+    | '/super-admin/verification'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
+    | '/owner/access'
     | '/owner/analytics'
     | '/owner/availability'
     | '/owner/bookings'
@@ -474,6 +594,7 @@ export interface FileRouteTypes {
     | '/owner/rooms'
     | '/owner/settings'
     | '/owner/status'
+    | '/owner/team'
     | '/owner/onboarding/step1'
     | '/owner/onboarding/step2'
     | '/owner/onboarding/step3'
@@ -489,6 +610,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/forgot-password'
+    | '/list-property'
     | '/login'
     | '/sso'
     | '/owner/onboarding'
@@ -502,11 +624,20 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/owner/_portal'
     | '/super-admin/admins'
+    | '/super-admin/bookings'
     | '/super-admin/dashboard'
+    | '/super-admin/disputes'
+    | '/super-admin/payouts'
+    | '/super-admin/properties'
+    | '/super-admin/reviews'
     | '/super-admin/settings'
+    | '/super-admin/tickets'
+    | '/super-admin/users'
+    | '/super-admin/verification'
     | '/support/dashboard'
     | '/support/tickets'
     | '/support/users'
+    | '/owner/_portal/access'
     | '/owner/_portal/analytics'
     | '/owner/_portal/availability'
     | '/owner/_portal/bookings'
@@ -518,6 +649,7 @@ export interface FileRouteTypes {
     | '/owner/_portal/rooms'
     | '/owner/_portal/settings'
     | '/owner/_portal/status'
+    | '/owner/_portal/team'
     | '/owner/onboarding/step1'
     | '/owner/onboarding/step2'
     | '/owner/onboarding/step3'
@@ -534,6 +666,7 @@ export interface RootRouteChildren {
   SuperAdminRouteRoute: typeof SuperAdminRouteRouteWithChildren
   SupportRouteRoute: typeof SupportRouteRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  ListPropertyRoute: typeof ListPropertyRoute
   LoginRoute: typeof LoginRoute
   SsoRoute: typeof SsoRoute
 }
@@ -559,6 +692,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/list-property': {
+      id: '/list-property'
+      path: '/list-property'
+      fullPath: '/list-property'
+      preLoaderRoute: typeof ListPropertyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -673,6 +813,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminAdminsRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
+    '/super-admin/bookings': {
+      id: '/super-admin/bookings'
+      path: '/bookings'
+      fullPath: '/super-admin/bookings'
+      preLoaderRoute: typeof SuperAdminBookingsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
     '/super-admin/dashboard': {
       id: '/super-admin/dashboard'
       path: '/dashboard'
@@ -680,11 +827,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminDashboardRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
+    '/super-admin/disputes': {
+      id: '/super-admin/disputes'
+      path: '/disputes'
+      fullPath: '/super-admin/disputes'
+      preLoaderRoute: typeof SuperAdminDisputesRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/payouts': {
+      id: '/super-admin/payouts'
+      path: '/payouts'
+      fullPath: '/super-admin/payouts'
+      preLoaderRoute: typeof SuperAdminPayoutsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/properties': {
+      id: '/super-admin/properties'
+      path: '/properties'
+      fullPath: '/super-admin/properties'
+      preLoaderRoute: typeof SuperAdminPropertiesRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/reviews': {
+      id: '/super-admin/reviews'
+      path: '/reviews'
+      fullPath: '/super-admin/reviews'
+      preLoaderRoute: typeof SuperAdminReviewsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
     '/super-admin/settings': {
       id: '/super-admin/settings'
       path: '/settings'
       fullPath: '/super-admin/settings'
       preLoaderRoute: typeof SuperAdminSettingsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/tickets': {
+      id: '/super-admin/tickets'
+      path: '/tickets'
+      fullPath: '/super-admin/tickets'
+      preLoaderRoute: typeof SuperAdminTicketsRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/users': {
+      id: '/super-admin/users'
+      path: '/users'
+      fullPath: '/super-admin/users'
+      preLoaderRoute: typeof SuperAdminUsersRouteImport
+      parentRoute: typeof SuperAdminRouteRoute
+    }
+    '/super-admin/verification': {
+      id: '/super-admin/verification'
+      path: '/verification'
+      fullPath: '/super-admin/verification'
+      preLoaderRoute: typeof SuperAdminVerificationRouteImport
       parentRoute: typeof SuperAdminRouteRoute
     }
     '/support/dashboard': {
@@ -707,6 +903,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/support/users'
       preLoaderRoute: typeof SupportUsersRouteImport
       parentRoute: typeof SupportRouteRoute
+    }
+    '/owner/_portal/access': {
+      id: '/owner/_portal/access'
+      path: '/access'
+      fullPath: '/owner/access'
+      preLoaderRoute: typeof OwnerPortalAccessRouteImport
+      parentRoute: typeof OwnerPortalRoute
     }
     '/owner/_portal/analytics': {
       id: '/owner/_portal/analytics'
@@ -783,6 +986,13 @@ declare module '@tanstack/react-router' {
       path: '/status'
       fullPath: '/owner/status'
       preLoaderRoute: typeof OwnerPortalStatusRouteImport
+      parentRoute: typeof OwnerPortalRoute
+    }
+    '/owner/_portal/team': {
+      id: '/owner/_portal/team'
+      path: '/team'
+      fullPath: '/owner/team'
+      preLoaderRoute: typeof OwnerPortalTeamRouteImport
       parentRoute: typeof OwnerPortalRoute
     }
     '/owner/onboarding/step1': {
@@ -887,6 +1097,7 @@ const OwnerOnboardingRouteRouteWithChildren =
   OwnerOnboardingRouteRoute._addFileChildren(OwnerOnboardingRouteRouteChildren)
 
 interface OwnerPortalRouteChildren {
+  OwnerPortalAccessRoute: typeof OwnerPortalAccessRoute
   OwnerPortalAnalyticsRoute: typeof OwnerPortalAnalyticsRoute
   OwnerPortalAvailabilityRoute: typeof OwnerPortalAvailabilityRoute
   OwnerPortalBookingsRoute: typeof OwnerPortalBookingsRoute
@@ -898,9 +1109,11 @@ interface OwnerPortalRouteChildren {
   OwnerPortalRoomsRoute: typeof OwnerPortalRoomsRoute
   OwnerPortalSettingsRoute: typeof OwnerPortalSettingsRoute
   OwnerPortalStatusRoute: typeof OwnerPortalStatusRoute
+  OwnerPortalTeamRoute: typeof OwnerPortalTeamRoute
 }
 
 const OwnerPortalRouteChildren: OwnerPortalRouteChildren = {
+  OwnerPortalAccessRoute: OwnerPortalAccessRoute,
   OwnerPortalAnalyticsRoute: OwnerPortalAnalyticsRoute,
   OwnerPortalAvailabilityRoute: OwnerPortalAvailabilityRoute,
   OwnerPortalBookingsRoute: OwnerPortalBookingsRoute,
@@ -912,6 +1125,7 @@ const OwnerPortalRouteChildren: OwnerPortalRouteChildren = {
   OwnerPortalRoomsRoute: OwnerPortalRoomsRoute,
   OwnerPortalSettingsRoute: OwnerPortalSettingsRoute,
   OwnerPortalStatusRoute: OwnerPortalStatusRoute,
+  OwnerPortalTeamRoute: OwnerPortalTeamRoute,
 }
 
 const OwnerPortalRouteWithChildren = OwnerPortalRoute._addFileChildren(
@@ -934,14 +1148,30 @@ const OwnerRouteRouteWithChildren = OwnerRouteRoute._addFileChildren(
 
 interface SuperAdminRouteRouteChildren {
   SuperAdminAdminsRoute: typeof SuperAdminAdminsRoute
+  SuperAdminBookingsRoute: typeof SuperAdminBookingsRoute
   SuperAdminDashboardRoute: typeof SuperAdminDashboardRoute
+  SuperAdminDisputesRoute: typeof SuperAdminDisputesRoute
+  SuperAdminPayoutsRoute: typeof SuperAdminPayoutsRoute
+  SuperAdminPropertiesRoute: typeof SuperAdminPropertiesRoute
+  SuperAdminReviewsRoute: typeof SuperAdminReviewsRoute
   SuperAdminSettingsRoute: typeof SuperAdminSettingsRoute
+  SuperAdminTicketsRoute: typeof SuperAdminTicketsRoute
+  SuperAdminUsersRoute: typeof SuperAdminUsersRoute
+  SuperAdminVerificationRoute: typeof SuperAdminVerificationRoute
 }
 
 const SuperAdminRouteRouteChildren: SuperAdminRouteRouteChildren = {
   SuperAdminAdminsRoute: SuperAdminAdminsRoute,
+  SuperAdminBookingsRoute: SuperAdminBookingsRoute,
   SuperAdminDashboardRoute: SuperAdminDashboardRoute,
+  SuperAdminDisputesRoute: SuperAdminDisputesRoute,
+  SuperAdminPayoutsRoute: SuperAdminPayoutsRoute,
+  SuperAdminPropertiesRoute: SuperAdminPropertiesRoute,
+  SuperAdminReviewsRoute: SuperAdminReviewsRoute,
   SuperAdminSettingsRoute: SuperAdminSettingsRoute,
+  SuperAdminTicketsRoute: SuperAdminTicketsRoute,
+  SuperAdminUsersRoute: SuperAdminUsersRoute,
+  SuperAdminVerificationRoute: SuperAdminVerificationRoute,
 }
 
 const SuperAdminRouteRouteWithChildren = SuperAdminRouteRoute._addFileChildren(
@@ -971,6 +1201,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperAdminRouteRoute: SuperAdminRouteRouteWithChildren,
   SupportRouteRoute: SupportRouteRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  ListPropertyRoute: ListPropertyRoute,
   LoginRoute: LoginRoute,
   SsoRoute: SsoRoute,
 }

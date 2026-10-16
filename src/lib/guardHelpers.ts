@@ -1,3 +1,4 @@
+import { canAccessHotelRoute } from './hotel-access'
 import { redirect } from '@tanstack/react-router'
 import { useAuthStore } from '@/store/auth.store'
 import type { Role } from '@/types'
@@ -14,13 +15,19 @@ export function requireAuth(role?: Role) {
     throw redirect({ to: '/login' })
   }
 
-  if (role && user.role !== role) {
+  const hotelRoles: Role[] = ['owner', 'applicant', 'hotel_admin', 'manager', 'staff']
+  if (
+    role &&
+    user.role !== role &&
+    !(role === 'owner' && hotelRoles.includes(user.role))
+  ) {
     throw redirect({ to: '/login' })
   }
 }
 
-export function requireApproved() {
+export function requireApproved(route?: string) {
   const { user } = useAuthStore.getState()
+  if (route && !canAccessHotelRoute(user, route)) throw redirect({ to: '/owner/access' })
   if (user?.onboardingStatus !== 'approved') {
     throw redirect({ to: '/owner/status' })
   }

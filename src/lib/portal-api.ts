@@ -1,3 +1,5 @@
+import { withMembership } from './hotel-access'
+import type { HotelMembership } from '@/types'
 /**
  * portal-api.ts — real backend API calls for the partner portal.
  * Uses the shared `api` axios instance which auto-attaches the Bearer token
@@ -5,40 +7,27 @@
  */
 import { api } from './api'
 import { presignError, UploadError } from './upload-error'
-import type { User, Role, OnboardingStatus } from '@/types'
+import type { User, Role } from '@/types'
 
 // ── Type helpers ────────────────────────────────────────────────────────────
 
 type GlobalRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'SUPPORT'
-type PropertyStatus = 'draft' | 'pending_review' | 'needs_revision' | 'approved' | 'rejected' | 'suspended' | 'escalated' | null
 
 function mapRole(globalRole: GlobalRole): Role {
   if (globalRole === 'SUPER_ADMIN') return 'super_admin'
   if (globalRole === 'ADMIN') return 'admin'
   if (globalRole === 'SUPPORT') return 'support'
-  return 'owner'
-}
-
-function mapPropertyStatus(status: PropertyStatus): OnboardingStatus {
-  switch (status) {
-    case null:              return 'not_started'
-    case 'draft':           return 'in_progress'
-    case 'pending_review':  return 'submitted'
-    case 'needs_revision':  return 'revision_requested'
-    case 'approved':        return 'approved'
-    case 'rejected':        return 'rejected'
-    case 'escalated':       return 'under_review'
-    case 'suspended':       return 'suspended'
-    default:                return 'in_progress'
-  }
+  return 'applicant'
 }
 
 function buildInitials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('') || name.slice(0, 2).toUpperCase()
+  return (
+    name
+      .split(' ')
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? '')
+      .join('') || name.slice(0, 2).toUpperCase()
+  )
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -52,7 +41,7 @@ export interface PortalLoginResult {
 /**
  * Replaces the mock authApi.login().
  * 1. POST /auth/login  → tokens + server user
- * 2. GET  /me/property-status  → owner's current property & status (owners only)
+ * 2. GET  /me/properties  → hotel memberships and applications (global users)
  */
 export async function portalLogin(email: string, password: string): Promise<PortalLoginResult> {
   // Step 1 — login
@@ -72,30 +61,18 @@ export async function portalLogin(email: string, password: string): Promise<Port
   const role = mapRole(srv.globalRole)
   const name = srv.name ?? email.split('@')[0]
 
-  // Step 2 — for owners, check their property status
-  let onboardingStatus: OnboardingStatus = 'approved' // default for admins
-  let propertyId: string | undefined
-
-  if (role === 'owner') {
-    try {
-      const { data: propData } = await api.get<{
-        id: string | null
-        status: PropertyStatus
-        draftStep: number | null
-      }>('/me/property-status', {
-        headers: { Authorization: `Bearer ${tokens.accessToken}` },
-      })
-      onboardingStatus = mapPropertyStatus(propData.status)
-      if (propData.id) propertyId = propData.id
-    } catch (err) {
-      // Re-throw: silently defaulting would route an approved owner to the
-      // onboarding wizard on any transient network error. Let the login
-      // form's onError handler show a toast so the user can retry.
-      console.error('[portalLogin] GET /me/property-status failed:', err)
-      throw new Error('Unable to load your account status. Please try logging in again.')
-    }
-  }
-
+  // Step 2 — resolve property-scoped roles for global users
+  const memberships =
+    role === 'applicant'
+      ? (
+          await api.get<HotelMembership[]>('/me/properties', {
+            headers: { Authorization: `Bearer ${tokens.accessToken}` },
+          })
+        ).data
+      : []
+  const selected =
+    memberships.find((m) => m.status === 'approved' && m.role) ??
+    memberships.find((m) => m.isApplicant)
   const user: User = {
     id: srv.id,
     name,
@@ -103,12 +80,14 @@ export async function portalLogin(email: string, password: string): Promise<Port
     phone: srv.phone,
     role,
     avatarInitials: buildInitials(name),
-    onboardingStatus,
-    onboardingStep: onboardingStatus === 'in_progress' ? 1 : undefined,
-    propertyId,
+    onboardingStatus: 'approved',
   }
 
-  return { user, token: tokens.accessToken, refreshToken: tokens.refreshToken }
+  return {
+    user: role === 'applicant' ? withMembership(user, selected, memberships) : user,
+    token: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  }
 }
 
 // ── Owner onboarding ──────────────────────────────────────────────────────────
@@ -123,7 +102,7 @@ export async function createPropertyDraft(): Promise<string> {
 export async function saveOnboardingStep(
   propertyId: string,
   step: number,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): Promise<void> {
   await api.patch(`/properties/${propertyId}/step/${step}`, data)
 }
@@ -176,36 +155,52 @@ export function latestRevisionItems(revisionNotes: unknown): RevisionItem[] {
   if (!last || !Array.isArray(last.items)) return []
   return last.items.filter(
     (i): i is RevisionItem =>
-      !!i && typeof (i as RevisionItem).field === 'string' && typeof (i as RevisionItem).reason === 'string',
+      !!i &&
+      typeof (i as RevisionItem).field === 'string' &&
+      typeof (i as RevisionItem).reason === 'string'
   )
 }
 
-/** Get the saved draft data for a property. */
-export async function getPropertyDraft(propertyId: string): Promise<{
+export interface DraftCompliance {
+  accountType?: string
+  legalBusinessName: string
+  gstinMasked: string | null
+  panMasked: string
+  bankAccountNumberMasked: string
+  ifsc: string
+  accountHolderName: string
+  documents: { type: string; status: string; expiresAt: string | null }[]
+}
+export interface PropertyDraft {
   propertyId: string
   status: string
   draftStep: number | null
   draftData: Record<string, unknown>
-}> {
+  compliance: DraftCompliance | null
+}
+/** Get saved application data; compliance values remain masked. */
+export async function getPropertyDraft(propertyId: string): Promise<PropertyDraft> {
   const { data } = await api.get(`/properties/${propertyId}/draft`)
   return data
 }
 
 // ── Thin wrappers kept for backward compat with ownerApi mock call sites ─────
 
-/** IFSC lookup — kept as mock until a real IFSC provider is configured. */
-export async function verifyIFSC(ifsc: string): Promise<{ bank: string; branch: string; city: string }> {
-  const MOCK: Record<string, { bank: string; branch: string; city: string }> = {
-    HDFC0001234: { bank: 'HDFC Bank', branch: 'Connaught Place', city: 'New Delhi' },
-    SBIN0001234: { bank: 'State Bank of India', branch: 'MG Road', city: 'Bengaluru' },
-    ICIC0001234: { bank: 'ICICI Bank', branch: 'Bandra West', city: 'Mumbai' },
-    AXIS0001234: { bank: 'Axis Bank', branch: 'Bandra', city: 'Mumbai' },
-    KOTK0001234: { bank: 'Kotak Mahindra Bank', branch: 'Lower Parel', city: 'Mumbai' },
-  }
-  await new Promise((r) => setTimeout(r, 700))
-  const result = MOCK[ifsc.toUpperCase()]
-  if (!result) throw new Error('Invalid IFSC code. Try HDFC0001234, SBIN0001234, or ICIC0001234.')
-  return result
+/** Real branch lookup through Razorpay's public IFSC directory. */
+export async function verifyIFSC(
+  ifsc: string
+): Promise<{ bank: string; branch: string; city: string }> {
+  const code = ifsc.trim().toUpperCase()
+  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(code)) throw new Error('Enter a valid 11-character IFSC code.')
+  const unavailable = 'IFSC lookup is unavailable. Try again or enter the bank name manually.'
+  const response = await fetch(`https://ifsc.razorpay.com/${code}`, {
+    signal: AbortSignal.timeout(10000), credentials: 'omit',
+  }).catch(() => { throw new Error(unavailable) })
+  if (response.status === 404) throw new Error('IFSC not found. Check the code with your bank.')
+  if (!response.ok) throw new Error(unavailable)
+  const data = await response.json().catch(() => { throw new Error(unavailable) })
+  if (typeof data?.BANK !== 'string' || !data.BANK || typeof data.BRANCH !== 'string' || typeof data.CITY !== 'string') throw new Error(unavailable)
+  return { bank: data.BANK, branch: data.BRANCH, city: data.CITY }
 }
 
 /** Penny drop — kept as mock until a real banking API is configured. */
@@ -218,29 +213,51 @@ export async function pennyDrop(): Promise<{ success: boolean; amount: number; m
 export async function uploadFile(
   file: File,
   propertyId: string,
-  kind: 'photo' | 'document',
+  kind: 'photo' | 'document'
 ): Promise<{ url: string; key: string }> {
-  const { data } = await api.post<{ uploadUrl: string; url: string; key: string }>('/uploads/presign', {
-    propertyId,
-    kind,
-    fileName: file.name,
-    contentType: file.type,
-    size: file.size,
-  }).catch((error: unknown) => { throw presignError(error) })
+  const { data } = await api
+    .post<{ uploadUrl: string; url: string; key: string }>('/uploads/presign', {
+      propertyId,
+      kind,
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    })
+    .catch((error: unknown) => {
+      throw presignError(error)
+    })
 
   const validUrl = (value: unknown) => {
     if (typeof value !== 'string') return false
-    try { return ['http:', 'https:'].includes(new URL(value).protocol) } catch { return false }
+    try {
+      return ['http:', 'https:'].includes(new URL(value).protocol)
+    } catch {
+      return false
+    }
   }
-  if (!validUrl(data?.uploadUrl) || !validUrl(data?.url) || typeof data?.key !== 'string' || !data.key) {
-    throw new UploadError('The upload service returned an invalid upload URL. Please try again or contact support.')
+  if (
+    !validUrl(data?.uploadUrl) ||
+    !validUrl(data?.url) ||
+    typeof data?.key !== 'string' ||
+    !data.key
+  ) {
+    throw new UploadError(
+      'The upload service returned an invalid upload URL. Please try again or contact support.'
+    )
   }
   const uploadResponse = await fetch(data.uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },
     body: file,
-  }).catch(() => { throw new UploadError('Could not send the file to storage. Check your connection; storage access may need administrator attention.') })
-  if (!uploadResponse.ok) throw new UploadError(`Storage rejected the upload (HTTP ${uploadResponse.status}). Please try again or contact support.`)
+  }).catch(() => {
+    throw new UploadError(
+      'Could not send the file to storage. Check your connection; storage access may need administrator attention.'
+    )
+  })
+  if (!uploadResponse.ok)
+    throw new UploadError(
+      `Storage rejected the upload (HTTP ${uploadResponse.status}). Please try again or contact support.`
+    )
   return { url: data.url, key: data.key }
 }
 
