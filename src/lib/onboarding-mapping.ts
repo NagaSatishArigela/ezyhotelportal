@@ -526,10 +526,12 @@ function present(v: unknown): boolean {
 }
 
 /** True when the mapped payload has every DTO-required field the server needs to accept this step. */
-export function isServerStepComplete(serverStep: number, payload: Record<string, unknown>): boolean {
-  if (serverStep === 1 && payload.propertyType === 'other' && payload.otherAccommodation !== undefined && !otherAccommodationSchema.safeParse(payload.otherAccommodation).success) return false
+export function isServerStepComplete<T extends object>(serverStep: number, payload: T): boolean {
+  const record = payload as Record<string, unknown>
+
+  if (serverStep === 1 && record.propertyType === 'other' && record.otherAccommodation !== undefined && !otherAccommodationSchema.safeParse(record.otherAccommodation).success) return false
   if (serverStep === 3) {
-    const rooms = payload.rooms as unknown[] | undefined
+    const rooms = record.rooms as unknown[] | undefined
     const roomsOk = Array.isArray(rooms) && rooms.length > 0 &&
       rooms.every((r) => {
         const room = r as ServerStep3Room
@@ -538,13 +540,13 @@ export function isServerStepComplete(serverStep: number, payload: Record<string,
             && typeof room.maxOccupancy === 'number' && room.maxOccupancy >= 1
             && room.maxOccupancy <= (room.dormitory?.totalBeds ?? 0)))
       })
-    return roomsOk && present(payload.amenities) && present(payload.houseRules)
+    return roomsOk && present(record.amenities) && present(record.houseRules)
   }
   if (serverStep === 4) {
-    return present(payload.photos)
+    return present(record.photos)
   }
   const required = SERVER_STEP_REQUIRED[serverStep] ?? []
-  return required.every((f) => present(payload[f]))
+  return required.every((f) => present(record[f]))
 }
 
 /**
