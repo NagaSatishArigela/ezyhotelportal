@@ -511,7 +511,7 @@ export function mapServerStep(
 // DTO-required fields per server step (submit-time conditional fields like
 // minBookingHours / hourlyRate are NOT required at step-save time).
 const SERVER_STEP_REQUIRED: Record<number, string[]> = {
-  1: ['propertyName', 'propertyType', 'bookingPolicy', 'businessEntity', 'ownerFirstName', 'category'],
+  1: ['propertyName', 'propertyType', 'bookingPolicy', 'businessEntity', 'ownerFirstName', 'category', 'receptionMobile'],
   2: ['latitude', 'longitude', 'addressLine1', 'addressLine2', 'pincode', 'city', 'state'],
   3: [], // custom check below (rooms + amenities + houseRules)
   4: [], // custom check below (>=1 photo)

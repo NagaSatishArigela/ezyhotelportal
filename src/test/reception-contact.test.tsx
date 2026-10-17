@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { Step2RoomsPricing } from '@/pages/owner/onboarding/OnboardingScreens'
 import { PROPERTY_TYPES } from '@/lib/accommodation'
 import { receptionContactSchema } from '@/lib/reception-contact'
-import { mapStep1 } from '@/lib/onboarding-mapping'
+import { isServerStepComplete, mapStep1 } from '@/lib/onboarding-mapping'
 import { useOnboardingStore } from '@/store/onboarding.store'
 
 vi.mock('@/lib/portal-api', () => ({
@@ -35,4 +35,16 @@ it.each(['', '12345', '1234567890', '987654321a'])('rejects invalid required rec
 
 it('validates a landline when provided', () => {
   expect(receptionContactSchema.safeParse({ receptionMobile: '9876543210', receptionLandline: 'not a number' }).success).toBe(false)
+})
+
+it('requires a saved reception mobile before step 1 is considered complete', () => {
+  const base = {
+    1: { ownerName: 'Owner Name', businessEntity: 'individual', propertyCategory: 'mid' },
+    2: { propertyName: 'Hotel Name', propertyType: 'hotel', bookingPolicy: 'hourly' },
+  }
+  const missing = mapStep1(base)
+  expect(isServerStepComplete(1, missing)).toBe(false)
+
+  const complete = mapStep1({ ...base, 2: { ...base[2], receptionMobile: '9876543210' } })
+  expect(isServerStepComplete(1, complete)).toBe(true)
 })
